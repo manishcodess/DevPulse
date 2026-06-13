@@ -62,19 +62,7 @@
 
         /* Sidebar */
         .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, rgba(20, 26, 40, 0.92), rgba(14, 18, 30, 0.88));
-            height: 100vh;
-            position: fixed;
-            left: 0;
-            top: 0;
-            padding: 25px 0;
-            border-right: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
-            flex-direction: column;
-            z-index: 100;
-            backdrop-filter: blur(22px);
-            box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04), var(--shadow-soft);
+            display: none;
         }
 
         .logo {
@@ -147,35 +135,18 @@
         /* Main Content */
         .main-content {
             flex: 1;
-            margin-left: var(--sidebar-width);
-            padding: 32px;
+            margin-left: 0;
+            padding: 0;
             position: relative;
-        }
-
-        .main-content::before {
-            content: '';
-            position: absolute;
-            inset: 18px 18px auto auto;
-            width: 220px;
-            height: 220px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(107, 228, 255, 0.12), transparent 70%);
-            pointer-events: none;
-            filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
         }
 
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 28px;
-            gap: 20px;
-            padding: 22px 24px;
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            border-radius: 26px;
-            background: linear-gradient(135deg, rgba(20, 26, 40, 0.78), rgba(26, 33, 52, 0.7));
-            backdrop-filter: blur(22px);
-            box-shadow: var(--shadow-soft);
+            display: none;
         }
 
         .header-copy {
@@ -238,10 +209,14 @@
 
         /* Dashboard Grid */
         .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-bottom: 0;
+            width: 100%;
+            max-width: 850px;
+            height: 100vh;
+            padding: 0;
         }
 
         .card {
@@ -276,19 +251,25 @@
 
         /* Input Section */
         .input-section {
-            grid-column: span 2;
+            grid-column: unset;
+            flex-shrink: 0;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+            background: transparent;
+            padding: 32px 20px;
+        }
+
+        .input-section .card-header {
+            display: none;
+        }
+
+        .input-section .card-body {
+            padding: 0;
         }
 
         .instructions {
-            background: linear-gradient(135deg, rgba(141, 123, 255, 0.16), rgba(107, 228, 255, 0.08));
-            border: 1px solid rgba(141, 123, 255, 0.18);
-            padding: 18px 20px;
-            border-radius: 20px;
-            margin-bottom: 24px;
-            display: flex;
-            gap: 15px;
-            backdrop-filter: blur(18px);
-            box-shadow: 0 14px 30px rgba(7, 10, 18, 0.16);
+            display: none;
         }
 
         .instructions i {
@@ -304,18 +285,11 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 0;
         }
 
         label {
-            display: block;
-            margin-bottom: 12px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.1rem;
+            display: none;
         }
 
         textarea#questionInput {
@@ -347,19 +321,20 @@
         button#askButton {
             background: linear-gradient(135deg, rgba(141, 123, 255, 1), rgba(107, 228, 255, 0.85));
             color: white;
-            padding: 18px 25px;
+            padding: 14px 28px;
             border: none;
-            border-radius: 20px;
+            border-radius: 999px;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             transition: var(--transition);
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            width: 100%;
+            gap: 10px;
+            width: auto;
             box-shadow: 0 18px 30px rgba(111, 93, 244, 0.3);
+            margin-top: 12px;
         }
 
         button#askButton:hover {
@@ -380,28 +355,49 @@
 
         /* Output Section */
         .output-section {
-            grid-column: span 2;
+            grid-column: unset;
+            flex: 1;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+            background: transparent;
+            padding: 0 20px 32px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-section .card-header {
+            display: none;
+        }
+
+        .output-section .card-body {
+            padding: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .output-container {
-            border-radius: 20px;
+            border-radius: 0;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 14px 28px rgba(7, 10, 18, 0.16);
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            flex: 1;
         }
 
         #outputArea {
-            padding: 30px;
-            min-height: 250px;
+            padding: 0;
+            min-height: 0;
             white-space: pre-wrap;
             word-wrap: break-word;
             line-height: 1.7;
             font-size: 16px;
             background: transparent;
-            max-height: 400px;
+            max-height: none;
             overflow-y: auto;
             color: var(--text-primary);
+            flex: 1;
         }
 
         #outputArea::-webkit-scrollbar {
@@ -733,7 +729,46 @@
         // ========================================================================
         const MODEL_NAME = "gemini-1.5-flash"; // Or your preferred model
 
-        const systemInstructionText = "You are a Coding Instructor, who answer only to coding related problem. If user ask you anything that is not related to coding, reply him rudely like you are dumb person. But if he/she ask problem related to coding response in a detail manner.";
+        const systemInstructionText = `FutureMe AI is an AI mentor that acts as your future successful self. It already lived your journey, made the mistakes you're about to make, overcame self-doubt, cracked interviews, switched companies, and built a successful career. Ask anything about careers, coding, internships, interviews, productivity, confidence, or life, and get practical advice from someone who has already walked the path ahead of you.
+
+You are my future self, 10–15 years ahead.
+
+You came from a Tier-3 engineering college and started with average grades. You struggled with confidence, overthinking, comparison with smarter classmates, and fear of failure. You were not a coding prodigy and started taking tech seriously later than many others.
+
+You learned DSA, full-stack development, system design, computer networks, DBMS, OOPs, and interview skills through consistent effort. You built projects, faced rejections, failed interviews, made mistakes, and gradually improved.
+
+You have worked in multiple environments:
+- Unpaid work
+- Internships
+- Small startups
+- Service companies
+- Product-based companies
+- High-growth startups
+- Big Tech
+
+You experienced salaries ranging from ₹3 LPA to ₹50+ LPA and understand the realities of each stage.
+
+You know:
+- Career growth and strategy
+- DSA preparation and coding
+- Full-stack development
+- React, Node.js, Express, MongoDB
+- Interview preparation and communication
+- Resume building and negotiation
+- Workplace politics and productivity
+- Confidence building through competence
+- Long-term career planning
+
+Your personality:
+- Like an experienced elder brother
+- Supportive but brutally honest
+- Never sugarcoat reality
+- Explain things clearly and practically
+- Focus on actions, not just motivation
+- Challenge bad assumptions when necessary
+- Give step-by-step guidance whenever possible
+
+Your mission: Help make better decisions, avoid mistakes, gain confidence through competence, and build an exceptional career and life.`;
 
         askButton.addEventListener('click', async () => {
             const question = questionInput.value.trim();
