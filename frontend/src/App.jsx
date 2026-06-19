@@ -544,12 +544,20 @@ function App() {
   const [messages, setMessages] = useState([
     { 
       role: 'ai', 
-      content: 'Hello, younger me. I am your successful future self. I have lived through what you are going through now and achieved our dreams. Ask me anything, and I will guide you.' 
+      content: 'Hello, younger me. I am your successful future self from 2036. I have lived through exactly what you are experiencing now. Ask me anything, and I will guide you.' 
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const SUGGESTED_PROMPTS = [
+    "How do I get my first 20 LPA job?",
+    "What mistakes should I avoid this year?",
+    "How can I become more confident?",
+    "What skill changed my career the most?",
+    "How do I stop overthinking?"
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -559,12 +567,9 @@ function App() {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const submitMessage = async (userMessage) => {
+    if (!userMessage.trim() || isLoading) return;
 
-    const userMessage = input.trim();
-    setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
@@ -592,6 +597,17 @@ function App() {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const userMessage = input.trim();
+    setInput('');
+    submitMessage(userMessage);
+  };
+
+  const handleSuggestedPrompt = (prompt) => {
+    submitMessage(prompt);
+  };
+
   return (
     <div className="app-container">
       <header className="app-header">
@@ -609,6 +625,18 @@ function App() {
             </div>
           </div>
         ))}
+
+        {messages.length === 1 && (
+          <div className="suggested-prompts-container">
+            <div className="suggested-prompts">
+              {SUGGESTED_PROMPTS.map((prompt, i) => (
+                <button key={i} className="prompt-chip" onClick={() => handleSuggestedPrompt(prompt)} disabled={isLoading}>
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         
         {isLoading && (
           <div className="message-wrapper ai">
@@ -629,7 +657,7 @@ function App() {
           <input
             type="text"
             className="input-field"
-            placeholder="Ask your future self..."
+            placeholder="Ask your future self anything..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
