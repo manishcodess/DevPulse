@@ -203,7 +203,7 @@ function App() {
   useEffect(() => {
     const fetchGithubData = async () => {
       try {
-        const CACHE_KEY = 'devpulse-github-cache';
+        const CACHE_KEY = 'devpulse-github-cache-v2';
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
@@ -221,12 +221,31 @@ function App() {
         const eventsRes = await fetch(`https://api.github.com/users/${username}/events`);
         const events = await eventsRes.json();
         
+        if (events.message && events.message.includes("API rate limit")) {
+          showToast("GitHub API rate limit exceeded! Showing cached/partial data.");
+          console.warn("GitHub rate limit hit:", events.message);
+        }
+        
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
         const recentCommits = (events.length ? events : [])
           .filter(e => e.type === "PushEvent" && new Date(e.created_at) > sevenDaysAgo)
           .reduce((total, e) => total + (e.payload?.commits?.length || 0), 0);
+          
+        const todayLocal = new Date().toLocaleDateString();
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayLocal = yesterdayDate.toLocaleDateString();
+
+        const todayCommits = (events.length ? events : [])
+          .filter(e => e.type === "PushEvent" && new Date(e.created_at).toLocaleDateString() === todayLocal)
+          .reduce((total, e) => total + (e.payload?.commits?.length || 0), 0);
+
+        const yesterdayCommits = (events.length ? events : [])
+          .filter(e => e.type === "PushEvent" && new Date(e.created_at).toLocaleDateString() === yesterdayLocal)
+          .reduce((total, e) => total + (e.payload?.commits?.length || 0), 0);
+
           
         let totalCommits = '--', streak = '--', languages = [];
         try {
@@ -246,6 +265,8 @@ function App() {
           publicRepos: profile.public_repos,
           followers: profile.followers,
           weeklyCommits: recentCommits,
+          todayCommits,
+          yesterdayCommits,
           totalCommits: totalCommits,
           streak: streak,
           languages: languages,
@@ -301,16 +322,15 @@ function App() {
 
     const generateDailyBrief = async (ghData, lcData) => {
       try {
-        const prompt = `You are DevPulse AI coach. Based on this developer profile:
-   - LeetCode: ${lcData?.total ?? 347} solved
-   - GeeksforGeeks: ${gfgData?.total ?? 110} solved, ${gfgData?.score ?? 290} score
-   - GitHub: ${ghData?.weeklyCommits || 12} commits this week
-   - Weak topics: Trees, Dynamic Programming
-   - Goal: Get 20+ LPA job by 2026
+        const prompt = `You are a tough, humorous AI developer coach for Manish. Based on his recent activity:
+   - GitHub Commits Today: ${ghData?.todayCommits || 0}
+   - GitHub Commits Yesterday: ${ghData?.yesterdayCommits || 0}
+   - Total DSA Questions: ${lcData?.total ?? 'unknown'}
    
-   Give a 2-line personalized morning brief. Be direct, motivating, specific.
-   Example format: 'Yesterday you [observation]. Today focus on [specific action].'
-   Max 40 words. No emojis.`;
+   Give a brief status report about his consistency. DO NOT suggest what he should do today or give him advice.
+   ONLY tell him if he is "consistent", "improving", or "inconsistent" based on today and yesterday's stats. Mention the exact commit/DSA numbers for those two days.
+   If he didn't do any GitHub commits or DSA questions in BOTH days, roast him with humorous criticism (e.g. "Are we building a startup or taking a nap?"). 
+   Maintain a strict, humorous tone. Max 40 words. No emojis.`;
 
         const response = await ai.models.generateContent({
           model: "gemini-3.1-flash-lite",
@@ -492,8 +512,8 @@ function App() {
                 <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>total solved</span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
-                <span className="pill" style={{ background: 'rgba(255,161,22,0.1)', color: '#ffa116', border: '1px solid rgba(255,161,22,0.2)' }}>LeetCode: {leetcodeData?.total ?? 0}</span>
-                <span className="pill" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>GFG: {gfgData?.total ?? 0}</span>
+                <span className="pill">LeetCode: {leetcodeData?.total ?? 0}</span>
+                <span className="pill">GFG: {gfgData?.total ?? 0}</span>
               </div>
             </div>
           </div>
