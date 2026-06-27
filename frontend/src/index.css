@@ -960,7 +960,63 @@ body::before {
 }
 
 @media (max-width: 768px) {
+  .layout-container {
+    padding: 0;
+  }
+  
   .left-panel {
-    display: none !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    border-radius: 0;
+    border: none;
+    border-right: 1px solid var(--border-color);
+    transform: translateX(0);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .left-panel.closed {
+    display: flex; /* Override display: none from desktop */
+    transform: translateX(-100%);
+  }
+
+  .mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    opacity: 1;
+    transition: opacity 0.3s;
+  }
+
+  .mobile-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .main-content {
+    border-radius: 0;
+    border: none;
+  }
+
+  .app-header {
+    padding: 4rem 1rem 1rem;
+  }
+
+  .app-title {
+    font-size: 1.5rem;
+  }
+
+  .input-form {
+    border-radius: 20px;
+    margin: 0 16px;
+    min-height: 54px;
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
   }
 }

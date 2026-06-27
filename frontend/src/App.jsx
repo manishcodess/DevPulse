@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Zap, Settings, ExternalLink, Menu } from 'lucide-react';
+import { Send, Bot, Zap, ExternalLink, Menu } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
 // Initialize Gemini API
@@ -48,23 +48,10 @@ function App() {
   const [githubData, setGithubData] = useState(null);
   const [leetcodeData, setLeetcodeData] = useState(null);
   
-  // Storage states
-  
-  const [manualLeetcode, setManualLeetcode] = useState(() => 
-    JSON.parse(localStorage.getItem('devpulse-leetcode-manual')) || { total: 0, easy: 0, medium: 0, hard: 0, streak: 0 }
-  );
-
-  const getInitialGfg = () => {
-    const saved = JSON.parse(localStorage.getItem('devpulse-gfg-manual'));
-    if (saved && (saved.total > 0 || saved.score > 0)) return saved;
-    return { total: 110, score: 290 };
-  };
-  const [gfgData, setGfgData] = useState(getInitialGfg);
-  const [manualGfg, setManualGfg] = useState(getInitialGfg);
+  const [gfgData, setGfgData] = useState({ total: 110, score: 290 });
 
   const [activeTab, setActiveTab] = useState('chat');
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
-  const [resumeText, setResumeText] = useState("");
+  const [isPanelOpen, setIsPanelOpen] = useState(window.innerWidth > 768);
   const [resumeAnalysis, setResumeAnalysis] = useState("");
   const [resumeLoading, setResumeLoading] = useState(false);
   const fileInputRef = useRef(null);
@@ -98,23 +85,7 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const updateManualLeetcode = (field, val) => {
-    setManualLeetcode(prev => {
-      const next = {...prev, [field]: Number(val)};
-      localStorage.setItem('devpulse-leetcode-manual', JSON.stringify(next));
-      setLeetcodeData(next);
-      return next;
-    });
-  };
 
-  const updateManualGfg = (field, val) => {
-    setManualGfg(prev => {
-      const next = {...prev, [field]: Number(val)};
-      localStorage.setItem('devpulse-gfg-manual', JSON.stringify(next));
-      setGfgData(next);
-      return next;
-    });
-  };
 
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0];
@@ -123,7 +94,6 @@ function App() {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target.result;
-      setResumeText(text);
       await analyzeResume(text);
     };
     reader.readAsText(file);
@@ -154,13 +124,13 @@ function App() {
       Be harsh but constructive. Focus on what a recruiter actually looks for.`;
       
       const result = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-flash-lite",
         contents: prompt
       });
       
       setResumeAnalysis(result.text);
       showToast("Resume analyzed ✓");
-    } catch (err) {
+    } catch {
       setResumeAnalysis("SCORE: 0/10\n\nONE LINE VERDICT: Failed to analyze resume.");
       showToast("Failed to analyze resume", "error");
     } finally {
@@ -233,6 +203,16 @@ function App() {
   useEffect(() => {
     const fetchGithubData = async () => {
       try {
+        const CACHE_KEY = 'devpulse-github-cache';
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 15 * 60 * 1000) { // 15 mins cache
+            setGithubData(data);
+            return data;
+          }
+        }
+
         const username = "manishcodess";
         const profileRes = await fetch(`https://api.github.com/users/${username}`);
         if(!profileRes.ok) throw new Error('Github rate limit or error');
@@ -250,18 +230,18 @@ function App() {
           
         let totalCommits = '--', streak = '--', languages = [];
         try {
-          const statsRes = await fetch(`http://localhost:3001/api/github/${username}/stats`);
+          const statsRes = await fetch(`/api/github/${username}/stats`);
           if (statsRes.ok) {
             const stats = await statsRes.json();
             totalCommits = stats.totalCommits;
             streak = stats.streak;
             languages = stats.languages;
           }
-        } catch(e) {
+        } catch {
           console.warn("Please run 'node server.js' for extra GitHub stats");
         }
         
-        setGithubData({
+        const freshData = {
           username: profile.login,
           publicRepos: profile.public_repos,
           followers: profile.followers,
@@ -270,48 +250,61 @@ function App() {
           streak: streak,
           languages: languages,
           avatarUrl: profile.avatar_url
-        });
+        };
+
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: freshData, timestamp: Date.now() }));
+        setGithubData(freshData);
         showToast("GitHub data loaded ✓");
-      } catch (err) {
+        return freshData;
+      } catch {
         setErrors(prev => ({...prev, github: true}));
+        return null;
       }
     };
 
     const fetchLeetcodeData = async () => {
       try {
+        const CACHE_KEY = 'devpulse-leetcode-cache';
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 15 * 60 * 1000) { // 15 mins cache
+            setLeetcodeData(data);
+            return data;
+          }
+        }
+
         const username = "manishsharmacodes";
-        const solvedRes = await fetch(`https://alfa-leetcode-api.onrender.com/${username}/solved`);
+        const solvedRes = await fetch(`/api/leetcode/${username}`, { method: 'POST' });
         if (!solvedRes.ok) throw new Error("Leetcode API error");
         const solvedData = await solvedRes.json();
         
-        if (solvedData.errors) throw new Error("Leetcode user not found");
+        if (solvedData.error) throw new Error("Leetcode user not found");
 
-        const calendarRes = await fetch(`https://alfa-leetcode-api.onrender.com/${username}/calendar`);
-        const calendarData = await calendarRes.json();
+        const freshData = {
+          total: solvedData.total || 0,
+          easy: solvedData.easy || 0,
+          medium: solvedData.medium || 0,
+          hard: solvedData.hard || 0,
+          streak: 0
+        };
 
-        setLeetcodeData({
-          total: solvedData.solvedProblem || 0,
-          easy: solvedData.easySolved || 0,
-          medium: solvedData.mediumSolved || 0,
-          hard: solvedData.hardSolved || 0,
-          streak: calendarData.streak || 0
-        });
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: freshData, timestamp: Date.now() }));
+        setLeetcodeData(freshData);
         showToast("LeetCode data loaded ✓");
-      } catch (err) {
+        return freshData;
+      } catch {
         setErrors(prev => ({...prev, leetcode: true}));
-        const local = JSON.parse(localStorage.getItem('devpulse-leetcode-manual'));
-        if(local) {
-            setLeetcodeData(local);
-        }
+        return null;
       }
     };
 
-    const generateDailyBrief = async () => {
+    const generateDailyBrief = async (ghData, lcData) => {
       try {
         const prompt = `You are DevPulse AI coach. Based on this developer profile:
-   - LeetCode: ${leetcodeData?.total || 347} solved
-   - GeeksforGeeks: ${gfgData?.total || 0} solved, ${gfgData?.score || 0} score
-   - GitHub: ${githubData?.weeklyCommits || 12} commits this week
+   - LeetCode: ${lcData?.total ?? 347} solved
+   - GeeksforGeeks: ${gfgData?.total ?? 110} solved, ${gfgData?.score ?? 290} score
+   - GitHub: ${ghData?.weeklyCommits || 12} commits this week
    - Weak topics: Trees, Dynamic Programming
    - Goal: Get 20+ LPA job by 2026
    
@@ -320,21 +313,28 @@ function App() {
    Max 40 words. No emojis.`;
 
         const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.1-flash-lite",
           contents: prompt,
         });
         setDailyBrief(response.text);
         showToast("Daily brief generated ✓");
-      } catch (error) {
+      } catch {
         setDailyBrief("Ready to level up your skills today? Let's focus on the big picture.");
       } finally {
         setBriefLoading(false);
       }
     };
     
-    fetchGithubData();
-    fetchLeetcodeData();
-    generateDailyBrief();
+    const initializeApp = async () => {
+      const [ghData, lcData] = await Promise.all([
+        fetchGithubData(),
+        fetchLeetcodeData()
+      ]);
+      generateDailyBrief(ghData, lcData);
+    };
+
+    initializeApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const SUGGESTED_PROMPTS = [
@@ -353,6 +353,7 @@ function App() {
 
   useEffect(() => {
     scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading, activeTab]);
 
   const submitMessage = async (userMessage) => {
@@ -364,7 +365,7 @@ function App() {
 
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-flash-lite",
         contents: userMessage,
         config: {
           systemInstruction: buildSystemPrompt(githubData, leetcodeData, gfgData),
@@ -404,6 +405,10 @@ function App() {
           {toast.msg}
         </div>
       )}
+      <div 
+        className={`mobile-overlay ${!isPanelOpen ? 'hidden' : ''}`}
+        onClick={() => setIsPanelOpen(false)}
+      />
       <aside className={`left-panel ${!isPanelOpen ? 'closed' : ''}`}>
         <div className="sidebar-logo-container">
           <div className="logo-icon-bg">
@@ -473,61 +478,22 @@ function App() {
             )}
           </div>
 
-          {/* LEETCODE CARD */}
+          {/* PROBLEM SOLVING CARD */}
           <div className="integration-card">
             <div className="card-header">
-              <span className="card-label">LEETCODE</span>
-            </div>
-            {!leetcodeData && !errors.leetcode ? (
-              <div className="shimmer-loader" style={{ height: '40px', marginTop: '8px' }}></div>
-            ) : errors.leetcode ? (
-              <div className="manual-leetcode-inputs" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', alignItems: 'center' }}>
-                  <span>Total Solved:</span>
-                  <input type="number" value={manualLeetcode.total} onChange={(e) => updateManualLeetcode('total', e.target.value)} style={{ width: '50px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '4px', textAlign: 'center', padding: '2px' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', alignItems: 'center' }}>
-                  <span>Streak:</span>
-                  <input type="number" value={manualLeetcode.streak} onChange={(e) => updateManualLeetcode('streak', e.target.value)} style={{ width: '50px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '4px', textAlign: 'center', padding: '2px' }} />
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="leetcode-count">{leetcodeData.total} solved</div>
-                <div className="leetcode-pills">
-                  <span className="pill pill-easy">E {leetcodeData.easy}</span>
-                  <span className="pill pill-medium">M {leetcodeData.medium}</span>
-                  <span className="pill pill-hard">H {leetcodeData.hard}</span>
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '8px' }}>Last updated: just now</div>
-              </>
-            )}
-          </div>
-
-          {/* GFG CARD */}
-          <div className="integration-card">
-            <div className="card-header">
-              <span className="card-label">GEEKSFORGEEKS</span>
+              <span className="card-label">PROBLEM SOLVING</span>
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '-1px' }}>{manualGfg.total}</span>
-                <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>solved</span>
+                <span style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--text-primary)', letterSpacing: '-1px' }}>
+                  {(leetcodeData?.total ?? 0) + (gfgData?.total ?? 0)}
+                </span>
+                <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>total solved</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="pill pill-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>Score {manualGfg.score}</span>
-              </div>
-            </div>
-            
-            <div className="manual-leetcode-inputs" style={{ display: 'flex', gap: '12px', marginTop: '20px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Solved</span>
-                <input type="number" value={manualGfg.total} onChange={(e) => updateManualGfg('total', e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '6px', padding: '6px 8px', fontSize: '12px', outline: 'none' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Coding Score</span>
-                <input type="number" value={manualGfg.score} onChange={(e) => updateManualGfg('score', e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', color: 'white', borderRadius: '6px', padding: '6px 8px', fontSize: '12px', outline: 'none' }} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '4px' }}>
+                <span className="pill" style={{ background: 'rgba(255,161,22,0.1)', color: '#ffa116', border: '1px solid rgba(255,161,22,0.2)' }}>LeetCode: {leetcodeData?.total ?? 0}</span>
+                <span className="pill" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>GFG: {gfgData?.total ?? 0}</span>
               </div>
             </div>
           </div>
@@ -535,12 +501,12 @@ function App() {
 
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" style={{ position: 'relative' }}>
+        <button onClick={() => setIsPanelOpen(!isPanelOpen)} style={{ position: 'absolute', top: '24px', left: '24px', background: 'var(--surface-1)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', zIndex: 10, transition: 'all 0.2s ease' }}>
+          <Menu size={20} />
+        </button>
         <div className="app-container">
-          <div className="tabs-container" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-             <button onClick={() => setIsPanelOpen(!isPanelOpen)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
-               <Menu size={20} />
-             </button>
+          <div className="tabs-container">
              <button className={`tab-btn ${activeTab === 'chat' ? 'active' : ''}`} onClick={() => setActiveTab('chat')}>💬 Coach Chat <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+K</span></button>
              <button className={`tab-btn ${activeTab === 'resume' ? 'active' : ''}`} onClick={() => setActiveTab('resume')}>📄 Resume Review <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+R</span></button>
           </div>
