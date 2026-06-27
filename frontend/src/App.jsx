@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot } from 'lucide-react';
+import { Send, Bot, Zap, Settings } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
 // Initialize Gemini API
@@ -609,10 +609,88 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className="layout-container">
+      <aside className="left-panel">
+        <div className="sidebar-logo-container">
+          <div className="logo-icon-bg">
+            <Zap size={20} color="#ffffff" />
+          </div>
+          <span className="logo-text">DevPulse</span>
+        </div>
+
+        <div className="user-profile-card">
+          <div className="user-avatar">M</div>
+          <div className="user-info">
+            <span className="user-name">Manish</span>
+            <span className="user-role">Full Stack Developer</span>
+            <div className="user-status-container">
+              <div className="status-dot"></div>
+              <span className="status-text">Online</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="integration-cards-container">
+          {/* GITHUB CARD */}
+          <div className="integration-card">
+            <div className="card-header">
+              <span className="card-label">GITHUB</span>
+              <div className="card-status-right">
+                <div className="status-dot"></div>
+                <span>Connected</span>
+              </div>
+            </div>
+            <div className="github-stats">12 commits this week</div>
+            <div className="github-streak">🔥 23 day streak</div>
+          </div>
+
+          {/* LEETCODE CARD */}
+          <div className="integration-card">
+            <div className="card-header">
+              <span className="card-label">LEETCODE</span>
+            </div>
+            <div className="leetcode-count">347 solved</div>
+            <div className="leetcode-pills">
+              <span className="pill pill-easy">E 120</span>
+              <span className="pill pill-medium">M 100</span>
+              <span className="pill pill-hard">H 47</span>
+            </div>
+          </div>
+
+          {/* CODOLIO CARD */}
+          <div className="integration-card">
+            <div className="card-header">
+              <span className="card-label">CODOLIO</span>
+            </div>
+            <div className="codolio-stats">4 hrs focused today</div>
+            <div className="bar-chart">
+              <div className="bar" style={{height: '40%'}}></div>
+              <div className="bar" style={{height: '60%'}}></div>
+              <div className="bar" style={{height: '45%'}}></div>
+              <div className="bar" style={{height: '80%'}}></div>
+              <div className="bar" style={{height: '65%'}}></div>
+              <div className="bar" style={{height: '90%'}}></div>
+              <div className="bar" style={{height: '75%'}}></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="left-panel-spacer"></div>
+
+        <div className="left-panel-bottom">
+          <div className="settings-btn">
+            <Settings size={14} />
+            <span>Settings</span>
+          </div>
+          <button className="upgrade-btn">Upgrade to Pro</button>
+        </div>
+      </aside>
+
+      <main className="main-content">
+        <div className="app-container">
       <header className="app-header">
-        <h1 className="app-title">Future Me-AI<Bot className="inline-block ml-2" size={22} /></h1>
-        <p className="app-tagline">Ask your successful older self for guidance.</p>
+        <h1 className="app-title">DevPulse<Bot className="inline-block ml-2" size={22} /></h1>
+        <p className="app-tagline">Your AI-powered developer coach</p>
       </header>
 
       <main className="chat-container">
@@ -671,6 +749,12 @@ function App() {
           </button>
         </form>
       </div>
+        </div>
+      </main>
+
+      <aside className="right-panel">
+        {/* Right Panel Content */}
+      </aside>
     </div>
   );
 }
