@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ai } from '../services/aiService';
 
-export function useDevData(showToast) {
+export function useDevData(showToast, userCredentials = null) {
   const [githubData, setGithubData] = useState(null);
   const [leetcodeData, setLeetcodeData] = useState(null);
   const [gfgData, setGfgData] = useState({ total: 110, score: 290 });
@@ -14,7 +14,7 @@ export function useDevData(showToast) {
       try {
         const CACHE_KEY = 'devpulse-github-cache-v2';
         const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
+        if (cached && !userCredentials) {
           const { data, timestamp } = JSON.parse(cached);
           if (Date.now() - timestamp < 15 * 60 * 1000) { // 15 mins cache
             setGithubData(data);
@@ -22,7 +22,7 @@ export function useDevData(showToast) {
           }
         }
 
-        const username = "manishcodess";
+        const username = userCredentials?.github || "manishcodess";
         const profileRes = await fetch(`https://api.github.com/users/${username}`);
         if(!profileRes.ok) throw new Error('Github rate limit or error');
         const profile = await profileRes.json();
@@ -35,51 +35,48 @@ export function useDevData(showToast) {
           console.warn("GitHub rate limit hit:", events.message);
         }
         
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        let todayCommits = 0;
+        let yesterdayCommits = 0;
+        let streak = 0;
+        let languages = new Set();
+        let currentDay = new Date().toISOString().split('T')[0];
+
+        const pushEvents = (Array.isArray(events) ? events : []).filter(e => e.type === 'PushEvent');
         
-        const recentCommits = (events.length ? events : [])
-          .filter(e => e.type === "PushEvent" && new Date(e.created_at) > sevenDaysAgo)
-          .reduce((total, e) => total + (e.payload?.commits?.length || 0), 0);
+        for (const event of pushEvents) {
+          const eventDate = event.created_at.split('T')[0];
+          const commits = event.payload.commits ? event.payload.commits.length : 0;
           
-        const todayLocal = new Date().toLocaleDateString();
-        const yesterdayDate = new Date();
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayLocal = yesterdayDate.toLocaleDateString();
-
-        const todayCommits = (events.length ? events : [])
-          .filter(e => e.type === "PushEvent" && new Date(e.created_at).toLocaleDateString() === todayLocal)
-          .reduce((total, e) => total + (e.payload?.commits?.length || 0), 0);
-
-        const yesterdayCommits = (events.length ? events : [])
-          .filter(e => e.type === "PushEvent" && new Date(e.created_at).toLocaleDateString() === yesterdayLocal)
-          .reduce((total, e) => total + (e.payload?.commits?.length || 0), 0);
-
-          
-        let totalCommits = '--', streak = '--', languages = [];
-        try {
-          const statsRes = await fetch(`/api/github/${username}/stats`);
-          if (statsRes.ok) {
-            const stats = await statsRes.json();
-            totalCommits = stats.totalCommits;
-            streak = stats.streak;
-            languages = stats.languages;
+          if (eventDate === currentDay) {
+            todayCommits += commits;
+          } else if (eventDate === new Date(Date.now() - 86400000).toISOString().split('T')[0]) {
+            yesterdayCommits += commits;
           }
-        } catch {
-          console.warn("Please run 'node server.js' for extra GitHub stats");
         }
         
+        if (todayCommits > 0) streak = 1;
+
+        if (profile.public_repos > 0) {
+          try {
+            const reposRes = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=10`);
+            const repos = await reposRes.json();
+            if (Array.isArray(repos)) {
+              repos.forEach(r => { if(r.language) languages.add(r.language) });
+            }
+          } catch(e) {
+            console.log("Could not fetch repos", e);
+          }
+        }
+
         const freshData = {
           username: profile.login,
-          publicRepos: profile.public_repos,
-          followers: profile.followers,
-          weeklyCommits: recentCommits,
+          avatarUrl: profile.avatar_url,
+          publicRepos: profile.public_repos || 0,
+          totalCommits: pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0),
           todayCommits,
           yesterdayCommits,
-          totalCommits: totalCommits,
-          streak: streak,
-          languages: languages,
-          avatarUrl: profile.avatar_url
+          streak,
+          languages: Array.from(languages)
         };
 
         localStorage.setItem(CACHE_KEY, JSON.stringify({ data: freshData, timestamp: Date.now() }));
@@ -94,9 +91,9 @@ export function useDevData(showToast) {
 
     const fetchLeetcodeData = async () => {
       try {
-        const CACHE_KEY = 'devpulse-leetcode-cache';
+        const CACHE_KEY = 'devpulse-leetcode-cache-v2';
         const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
+        if (cached && !userCredentials) {
           const { data, timestamp } = JSON.parse(cached);
           if (Date.now() - timestamp < 15 * 60 * 1000) { // 15 mins cache
             setLeetcodeData(data);
@@ -104,7 +101,7 @@ export function useDevData(showToast) {
           }
         }
 
-        const username = "manishsharmacodes";
+        const username = userCredentials?.leetcode || "manishsharmacodes";
         const solvedRes = await fetch(`/api/leetcode/${username}`, { method: 'POST' });
         if (!solvedRes.ok) throw new Error("Leetcode API error");
         const solvedData = await solvedRes.json();
@@ -131,7 +128,7 @@ export function useDevData(showToast) {
 
     const generateDailyBrief = async (ghData, lcData) => {
       try {
-        const prompt = \`You are a good, helping AI developer coach for Manish. Based on his recent activity:
+        const prompt = `You are a good, helping AI developer coach for Manish. Based on his recent activity:
    - GitHub Commits Today: \${ghData?.todayCommits || 0}
    - GitHub Commits Yesterday: \${ghData?.yesterdayCommits || 0}
    - Total DSA Questions: \${lcData?.total ?? 'unknown'} on leetcode+110 on gfg
@@ -139,7 +136,7 @@ export function useDevData(showToast) {
    Give a brief status report about his consistency. DO NOT suggest what he should do today or give him advice.
    ONLY tell him if he is "consistent", "improving", or "inconsistent" based on today and yesterday's stats. Mention the exact commit/DSA numbers for those two days.
    If he didn't do any GitHub commits or DSA questions in BOTH days,() i know u are tired but its imp time like this). 
-    Max 40 words. No emojis.\`;
+    Max 40 words. No emojis.`;
 
         const response = await ai.models.generateContent({
           model: "gemini-3.1-flash-lite",
@@ -168,3 +165,4 @@ export function useDevData(showToast) {
 
   return { githubData, leetcodeData, gfgData, dailyBrief, briefLoading, errors };
 }
+        

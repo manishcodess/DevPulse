@@ -5,7 +5,7 @@ export function useChat(githubData, leetcodeData, gfgData) {
   const [messages, setMessages] = useState([
     { 
       role: 'ai', 
-      content: 'Hello, Manish. I am DevPulse, your AI developer coach. Let\\'s crush those goals. What are we working on today?',
+      content: "Hello, Manish. I am DevPulse, your AI developer coach. Let's crush those goals. What are we working on today?",
       timestamp: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
     }
   ]);

@@ -8,8 +8,11 @@ import LeftPanel from './components/layout/LeftPanel';
 import RightPanel from './components/layout/RightPanel';
 import ChatInterface from './components/chat/ChatInterface';
 import ResumeReview from './components/resume/ResumeReview';
+import Signup from './components/auth/Signup';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userCredentials, setUserCredentials] = useState(null);
   const [activeTab, setActiveTab] = useState('chat');
   const [isPanelOpen, setIsPanelOpen] = useState(window.innerWidth > 768);
   const [toast, setToast] = useState(null);
@@ -19,7 +22,13 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const { githubData, leetcodeData, gfgData, dailyBrief, briefLoading } = useDevData(showToast);
+  const handleSignup = (data) => {
+    setUserCredentials(data);
+    setIsAuthenticated(true);
+    showToast(`Welcome, ${data.name.split(' ')[0]}!`);
+  };
+
+  const { githubData, leetcodeData, gfgData, dailyBrief, briefLoading } = useDevData(showToast, userCredentials);
   
   const {
     messages,
@@ -72,6 +81,15 @@ function App() {
     scrollToBottom(activeTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading, isStreaming, activeTab]);
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <Toast toast={toast} />
+        <Signup onSignup={handleSignup} />
+      </>
+    );
+  }
 
   return (
     <div className="layout-container">
