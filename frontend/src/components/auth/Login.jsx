@@ -7,25 +7,34 @@ export default function Login({ onLogin, onSwitchToSignup }) {
     password: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate network delay for effect
-    setTimeout(() => {
-      setIsSubmitting(false);
-      // For mockup purposes, pass the email as name and empty github/leetcode
-      onLogin({
-        name: formData.email.split('@')[0],
-        email: formData.email,
-        github: '',
-        leetcode: ''
+    setError(null);
+
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
       });
-    }, 1200);
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Login failed');
+      
+      localStorage.setItem('devpulse_token', data.token);
+      onLogin(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -43,6 +52,12 @@ export default function Login({ onLogin, onSwitchToSignup }) {
           <h1 className="auth-title">Welcome Back</h1>
           <p className="auth-subtitle">Log in to continue your developer journey.</p>
         </div>
+
+        {error && (
+          <div style={{ color: '#ef4444', fontSize: '13px', textAlign: 'center', marginBottom: '16px', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
+            {error}
+          </div>
+        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-group">
@@ -75,6 +90,7 @@ export default function Login({ onLogin, onSwitchToSignup }) {
             type="submit" 
             className={`auth-submit-btn ${isSubmitting ? 'loading' : ''}`}
             disabled={isSubmitting}
+            style={{ marginTop: '16px' }}
           >
             {isSubmitting ? (
               <div className="auth-spinner"></div>

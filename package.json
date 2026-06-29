@@ -1,11 +1,9 @@
 {
+  "name": "future-me-ai-root",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "start": "node server.js",
-    "dev": "concurrently \"npm start\" \"npm run dev --prefix frontend\""
-  },
-  "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
   },
   "devDependencies": {
     "concurrently": "^10.0.3"

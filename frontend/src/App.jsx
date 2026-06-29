@@ -10,6 +10,7 @@ import ChatInterface from './components/chat/ChatInterface';
 import ResumeReview from './components/resume/ResumeReview';
 import Signup from './components/auth/Signup';
 import Login from './components/auth/Login';
+import Onboarding from './components/auth/Onboarding';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -28,6 +29,11 @@ function App() {
     setUserCredentials(data);
     setIsAuthenticated(true);
     showToast(`Welcome, ${data.name.split(' ')[0]}!`);
+  };
+
+  const handleOnboardingComplete = (data) => {
+    setUserCredentials(data);
+    showToast(`Profiles linked successfully!`);
   };
 
   const { githubData, leetcodeData, gfgData, dailyBrief, briefLoading } = useDevData(showToast, userCredentials);
@@ -93,6 +99,15 @@ function App() {
         ) : (
           <Login onLogin={handleAuth} onSwitchToSignup={() => setAuthView('signup')} />
         )}
+      </>
+    );
+  }
+
+  if (isAuthenticated && (!userCredentials?.github || !userCredentials?.leetcode)) {
+    return (
+      <>
+        <Toast toast={toast} />
+        <Onboarding onComplete={handleOnboardingComplete} />
       </>
     );
   }

@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Zap, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Code2, Github, ArrowRight, Save } from 'lucide-react';
 
-export default function Signup({ onSignup, onSwitchToLogin }) {
+export default function Onboarding({ onComplete }) {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: ''
+    github: '',
+    leetcode: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -20,17 +19,23 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/signup', {
+      const token = localStorage.getItem('devpulse_token');
+      const response = await fetch('http://localhost:3001/api/auth/onboard', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          githubUsername: formData.github,
+          leetcodeUsername: formData.leetcode
+        })
       });
-      
+
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Signup failed');
-      
-      localStorage.setItem('devpulse_token', data.token);
-      onSignup(data.user);
+      if (!response.ok) throw new Error(data.error || 'Failed to update profiles');
+
+      onComplete(data.user);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,13 +50,13 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
         <div className="auth-blob blob-2"></div>
       </div>
       
-      <div className="auth-card">
+      <div className="auth-card" style={{ maxWidth: '480px' }}>
         <div className="auth-header">
-          <div className="auth-logo-bg">
-            <Zap size={24} color="#ffffff" />
+          <div className="auth-logo-bg" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+            <Save size={24} color="#ffffff" />
           </div>
-          <h1 className="auth-title">Welcome to DevPulse</h1>
-          <p className="auth-subtitle">Your AI developer coach is waiting. Let's get started.</p>
+          <h1 className="auth-title">Complete Your Profile</h1>
+          <p className="auth-subtitle">Link your developer profiles to unlock personalized insights and stats.</p>
         </div>
 
         {error && (
@@ -62,39 +67,26 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <User className="input-icon" size={18} />
+            <Github className="input-icon" size={18} />
             <input 
               type="text" 
-              name="name"
-              placeholder="Full Name" 
+              name="github"
+              placeholder="GitHub Username (e.g. manishcodess)" 
               className="auth-input"
-              value={formData.name}
+              value={formData.github}
               onChange={handleChange}
               required
             />
           </div>
 
           <div className="input-group">
-            <Mail className="input-icon" size={18} />
+            <Code2 className="input-icon" size={18} />
             <input 
-              type="email" 
-              name="email"
-              placeholder="Email Address" 
+              type="text" 
+              name="leetcode"
+              placeholder="LeetCode Username (e.g. manishsharmacodes)" 
               className="auth-input"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="input-group">
-            <Lock className="input-icon" size={18} />
-            <input 
-              type="password" 
-              name="password"
-              placeholder="Password" 
-              className="auth-input"
-              value={formData.password}
+              value={formData.leetcode}
               onChange={handleChange}
               required
             />
@@ -104,22 +96,18 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
             type="submit" 
             className={`auth-submit-btn ${isSubmitting ? 'loading' : ''}`}
             disabled={isSubmitting}
-            style={{ marginTop: '16px' }}
+            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', marginTop: '16px' }}
           >
             {isSubmitting ? (
               <div className="auth-spinner"></div>
             ) : (
               <>
-                Create Account
+                Save & Continue
                 <ArrowRight size={18} className="btn-icon" />
               </>
             )}
           </button>
         </form>
-        
-        <p className="auth-footer">
-          Already have an account? <span className="auth-link" onClick={onSwitchToLogin}>Log in</span>
-        </p>
       </div>
     </div>
   );
