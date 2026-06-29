@@ -80,12 +80,25 @@ export function useDevData(showToast, userCredentials = null) {
             console.log("Could not fetch repos", e);
           }
         }
+        
+        let totalCommits = 0;
+        try {
+          const searchRes = await fetch(`https://api.github.com/search/commits?q=author:${username}`);
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            totalCommits = searchData.total_count || 0;
+          } else {
+            totalCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0);
+          }
+        } catch (e) {
+          totalCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0);
+        }
 
         const freshData = {
           username: profile.login,
           avatarUrl: profile.avatar_url,
           publicRepos: profile.public_repos || 0,
-          totalCommits: pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0),
+          totalCommits,
           todayCommits,
           yesterdayCommits,
           streak,

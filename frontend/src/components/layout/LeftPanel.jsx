@@ -40,7 +40,7 @@ export default function LeftPanel({ isPanelOpen, githubData, leetcodeData, gfgDa
             <div className="shimmer-loader" style={{ height: '40px', marginTop: '8px' }}></div>
           ) : (
             <>
-              <div className="dev-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px 16px', marginTop: '20px', marginBottom: '12px' }}>
+              <div className="dev-stats-grid">
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Commits</span>
                   <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{githubData.totalCommits}</span>
@@ -69,7 +69,7 @@ export default function LeftPanel({ isPanelOpen, githubData, leetcodeData, gfgDa
           )}
         </div>
 
-        <div className="integration-card" style={{ marginTop: '12px' }}>
+        <div className="integration-card">
           <div className="card-header">
             <span className="card-label">PROBLEM SOLVING</span>
           </div>
