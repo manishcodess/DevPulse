@@ -17,8 +17,10 @@ export default function ChatInterface({
   inputRef,
   messagesEndRef,
   submitMessage,
-  getGreeting
+  getGreeting,
+  userCredentials
 }) {
+  const userName = userCredentials?.name?.split(' ')[0] || "User";
   const handleSubmit = (e) => {
     e.preventDefault();
     const userMessage = input.trim();
@@ -33,7 +35,7 @@ export default function ChatInterface({
   return (
     <>
       <div className="greeting-section">
-        <h2 className="greeting-text">{getGreeting()}, Manish 👋</h2>
+        <h2 className="greeting-text">{getGreeting()}, {userName} 👋</h2>
       </div>
 
       <main className="chat-container">

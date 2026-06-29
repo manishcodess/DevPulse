@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Code2, Github, ArrowRight, Save } from 'lucide-react';
+import { Code2, User, ArrowRight, Save } from 'lucide-react';
 
 export default function Onboarding({ onComplete }) {
   const [formData, setFormData] = useState({
@@ -67,11 +67,11 @@ export default function Onboarding({ onComplete }) {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <Github className="input-icon" size={18} />
+            <User className="input-icon" size={18} />
             <input 
               type="text" 
               name="github"
-              placeholder="GitHub Username (e.g. manishcodess)" 
+              placeholder="GitHub Username (e.g. octocat)" 
               className="auth-input"
               value={formData.github}
               onChange={handleChange}
@@ -84,7 +84,7 @@ export default function Onboarding({ onComplete }) {
             <input 
               type="text" 
               name="leetcode"
-              placeholder="LeetCode Username (e.g. manishsharmacodes)" 
+              placeholder="LeetCode Username (e.g. leetcode_user)" 
               className="auth-input"
               value={formData.leetcode}
               onChange={handleChange}

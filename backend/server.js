@@ -10,9 +10,30 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/devpulse')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+let isDbConnected = false;
+
+async function connectDB() {
+  try {
+    // If we are in production (e.g. deployed on Vercel/Render), ALWAYS use the real MongoDB Atlas database.
+    if (process.env.NODE_ENV === 'production') {
+      await mongoose.connect(process.env.MONGODB_URI);
+      console.log('Connected to MongoDB Atlas (Production)');
+      isDbConnected = true;
+      return;
+    }
+
+    // Otherwise, we are in local development (using your mobile hotspot), so we use the local in-memory DB to bypass blocks!
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongoServer = await MongoMemoryServer.create();
+    const mongoUri = mongoServer.getUri();
+    await mongoose.connect(mongoUri);
+    console.log('Connected to Local In-Memory MongoDB (Development Mode)');
+    isDbConnected = true;
+  } catch (err) {
+    console.error('Database connection failed:', err);
+  }
+}
+connectDB();
 
 // Mount Routes
 app.use('/api/auth', authRoutes);

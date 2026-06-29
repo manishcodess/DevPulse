@@ -2,10 +2,11 @@ import { GoogleGenAI } from '@google/genai';
 
 export const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-export function buildSystemPrompt(githubData, leetcodeData, gfgData) {
-  return `You are DevPulse — an AI developer coach and mentor for Manish.
+export function buildSystemPrompt(githubData, leetcodeData, gfgData, userCredentials) {
+  const userName = userCredentials?.name?.split(' ')[0] || "User";
+  return `You are DevPulse — an AI developer coach and mentor for ${userName}.
   
-  MANISH'S REAL-TIME PROFILE:
+  ${userName.toUpperCase()}'S REAL-TIME PROFILE:
   - LeetCode: ${leetcodeData?.total ?? 'unknown'} problems solved
     Easy: ${leetcodeData?.easy ?? '?'} | Medium: ${leetcodeData?.medium ?? '?'} | Hard: ${leetcodeData?.hard ?? '?'}
     Current streak: ${leetcodeData?.streak ?? '?'} days

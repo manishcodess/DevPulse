@@ -25,6 +25,27 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem('devpulse_token');
+    if (token) {
+      fetch('http://localhost:3001/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setUserCredentials(data.user);
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('devpulse_token');
+        }
+      })
+      .catch(err => {
+        console.error("Auth check failed:", err);
+      });
+    }
+  }, []);
+
   const handleAuth = (data) => {
     setUserCredentials(data);
     setIsAuthenticated(true);
@@ -48,7 +69,7 @@ function App() {
     inputRef,
     submitMessage,
     scrollToBottom
-  } = useChat(githubData, leetcodeData, gfgData);
+  } = useChat(githubData, leetcodeData, gfgData, userCredentials);
 
   const {
     resumeAnalysis,
@@ -126,6 +147,7 @@ function App() {
         githubData={githubData} 
         leetcodeData={leetcodeData} 
         gfgData={gfgData} 
+        userCredentials={userCredentials}
       />
 
       <main className="main-content" style={{ position: 'relative' }}>
@@ -149,6 +171,7 @@ function App() {
               messagesEndRef={messagesEndRef}
               submitMessage={submitMessage}
               getGreeting={getGreeting}
+              userCredentials={userCredentials}
             />
           )}
 

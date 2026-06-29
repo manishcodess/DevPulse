@@ -1,7 +1,7 @@
 import React from 'react';
 import { Zap, ExternalLink } from 'lucide-react';
 
-export default function LeftPanel({ isPanelOpen, githubData, leetcodeData, gfgData }) {
+export default function LeftPanel({ isPanelOpen, githubData, leetcodeData, gfgData, userCredentials }) {
   return (
     <aside className={`left-panel ${!isPanelOpen ? 'closed' : ''}`}>
       <div className="sidebar-logo-container">
@@ -18,7 +18,7 @@ export default function LeftPanel({ isPanelOpen, githubData, leetcodeData, gfgDa
           <div className="user-avatar">M</div>
         )}
         <div className="user-info">
-          <span className="user-name">{githubData?.username || "Manish"}</span>
+          <span className="user-name">{githubData?.username || userCredentials?.name?.split(' ')[0] || "Developer"}</span>
           <span className="user-role">Full Stack Developer</span>
           <div className="user-status-container">
             <div className="status-dot"></div>
@@ -31,7 +31,7 @@ export default function LeftPanel({ isPanelOpen, githubData, leetcodeData, gfgDa
         <div className="integration-card">
           <div className="card-header">
             <span className="card-label">GITHUB STATS</span>
-            <a href={`https://github.com/${githubData?.username || 'manishcodess'}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
+            <a href={`https://github.com/${githubData?.username || userCredentials?.github || 'github'}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
               <ExternalLink size={14} />
             </a>
           </div>

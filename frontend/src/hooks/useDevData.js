@@ -12,9 +12,16 @@ export function useDevData(showToast, userCredentials = null) {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    // Clear old data when user changes to prevent showing fallback info
+    if (userCredentials) {
+      setGithubData(null);
+      setLeetcodeData(null);
+    }
+    
     const fetchGithubData = async () => {
       try {
-        const CACHE_KEY = 'devpulse-github-cache-v2';
+        const username = userCredentials?.github;
+        const CACHE_KEY = `devpulse-github-cache-v2-${username || 'anon'}`;
         
         if (!userCredentials) {
           const cached = getCachedData(CACHE_KEY, 15);
@@ -24,7 +31,10 @@ export function useDevData(showToast, userCredentials = null) {
           }
         }
 
-        const username = userCredentials?.github || "manishcodess";
+        if (!username || username.trim() === '') {
+          return null;
+        }
+        
         const profileRes = await fetch(`https://api.github.com/users/${username}`);
         if(!profileRes.ok) throw new Error('Github rate limit or error');
         const profile = await profileRes.json();
@@ -94,7 +104,8 @@ export function useDevData(showToast, userCredentials = null) {
 
     const fetchLeetcodeData = async () => {
       try {
-        const CACHE_KEY = 'devpulse-leetcode-cache-v2';
+        const username = userCredentials?.leetcode;
+        const CACHE_KEY = `devpulse-leetcode-cache-v2-${username || 'anon'}`;
         
         if (!userCredentials) {
           const cached = getCachedData(CACHE_KEY, 15);
@@ -104,8 +115,11 @@ export function useDevData(showToast, userCredentials = null) {
           }
         }
 
-        const username = userCredentials?.leetcode || "manishsharmacodes";
-        const solvedRes = await fetch(`/api/leetcode/${username}`, { method: 'POST' });
+        if (!username || username.trim() === '') {
+          return null;
+        }
+
+        const solvedRes = await fetch(`http://localhost:3001/api/leetcode/${username}`, { method: 'POST' });
         if (!solvedRes.ok) throw new Error("Leetcode API error");
         const solvedData = await solvedRes.json();
         
@@ -131,7 +145,7 @@ export function useDevData(showToast, userCredentials = null) {
 
     const generateDailyBrief = async (ghData, lcData) => {
       try {
-        const userName = userCredentials?.name?.split(' ')[0] || "Manish";
+        const userName = userCredentials?.name?.split(' ')[0] || "User";
         const prompt = `You are DevPulse, an AI developer mentor.
 
 Generate today's Daily Brief for the user using ONLY the provided real-time data.
@@ -196,7 +210,7 @@ Maximum 70 words.`;
 
     initializeApp();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userCredentials]);
 
   return { githubData, leetcodeData, gfgData, dailyBrief, briefLoading, errors };
 }

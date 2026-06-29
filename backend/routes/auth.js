@@ -100,4 +100,24 @@ router.post('/onboard', verifyToken, async (req, res) => {
   }
 });
 
+// Get Current User
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        github: user.githubUsername,
+        leetcode: user.leetcodeUsername
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
