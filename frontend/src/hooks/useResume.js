@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { ai } from '../services/aiService';
+import { readFileAsBase64, readFileAsText } from '../utils/file';
 
 export function useResume(showToast) {
   const [resumeAnalysis, setResumeAnalysis] = useState("");
@@ -57,20 +58,17 @@ export function useResume(showToast) {
     const file = e.target.files[0];
     if(!file) return;
     
-    if (file.type === "application/pdf") {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64Data = event.target.result.split(',')[1];
+    try {
+      if (file.type === "application/pdf") {
+        const base64Data = await readFileAsBase64(file);
         await analyzeResume("", base64Data);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const text = event.target.result;
+      } else {
+        const text = await readFileAsText(file);
         await analyzeResume(text, null);
-      };
-      reader.readAsText(file);
+      }
+    } catch (err) {
+      console.error("Error reading file:", err);
+      showToast("Failed to read file", "error");
     }
   };
 

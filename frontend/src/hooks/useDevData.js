@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ai } from '../services/aiService';
+import { getCachedData, setCachedData } from '../utils/storage';
+import { getTodayString, getYesterdayString } from '../utils/date';
 
 export function useDevData(showToast, userCredentials = null) {
   const [githubData, setGithubData] = useState(null);
@@ -13,12 +15,12 @@ export function useDevData(showToast, userCredentials = null) {
     const fetchGithubData = async () => {
       try {
         const CACHE_KEY = 'devpulse-github-cache-v2';
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached && !userCredentials) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 15 * 60 * 1000) { // 15 mins cache
-            setGithubData(data);
-            return data;
+        
+        if (!userCredentials) {
+          const cached = getCachedData(CACHE_KEY, 15);
+          if (cached) {
+            setGithubData(cached);
+            return cached;
           }
         }
 
@@ -39,7 +41,8 @@ export function useDevData(showToast, userCredentials = null) {
         let yesterdayCommits = 0;
         let streak = 0;
         let languages = new Set();
-        let currentDay = new Date().toISOString().split('T')[0];
+        const currentDay = getTodayString();
+        const prevDay = getYesterdayString();
 
         const pushEvents = (Array.isArray(events) ? events : []).filter(e => e.type === 'PushEvent');
         
@@ -49,7 +52,7 @@ export function useDevData(showToast, userCredentials = null) {
           
           if (eventDate === currentDay) {
             todayCommits += commits;
-          } else if (eventDate === new Date(Date.now() - 86400000).toISOString().split('T')[0]) {
+          } else if (eventDate === prevDay) {
             yesterdayCommits += commits;
           }
         }
@@ -79,7 +82,7 @@ export function useDevData(showToast, userCredentials = null) {
           languages: Array.from(languages)
         };
 
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: freshData, timestamp: Date.now() }));
+        setCachedData(CACHE_KEY, freshData);
         setGithubData(freshData);
         showToast("GitHub data loaded ✓");
         return freshData;
@@ -92,12 +95,12 @@ export function useDevData(showToast, userCredentials = null) {
     const fetchLeetcodeData = async () => {
       try {
         const CACHE_KEY = 'devpulse-leetcode-cache-v2';
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached && !userCredentials) {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < 15 * 60 * 1000) { // 15 mins cache
-            setLeetcodeData(data);
-            return data;
+        
+        if (!userCredentials) {
+          const cached = getCachedData(CACHE_KEY, 15);
+          if (cached) {
+            setLeetcodeData(cached);
+            return cached;
           }
         }
 
@@ -116,7 +119,7 @@ export function useDevData(showToast, userCredentials = null) {
           streak: 0
         };
 
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: freshData, timestamp: Date.now() }));
+        setCachedData(CACHE_KEY, freshData);
         setLeetcodeData(freshData);
         showToast("LeetCode data loaded ✓");
         return freshData;
