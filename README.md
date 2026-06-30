@@ -30,12 +30,12 @@ I wanted a developer dashboard that didn't just passively show stats, but active
 ## Architecture
 ```mermaid
 flowchart LR
-    UI[Frontend Client<br/>Vite + React] -->|HTTPS Requests| API(Backend API Proxy<br/>Node.js + Express)
+    UI["Frontend Client<br/>Vite + React"] -->|HTTPS Requests| API("Backend API Proxy<br/>Node.js + Express")
     
-    API -->|GraphQL| LC[LeetCode API]
-    API -->|REST| GH[GitHub API]
-    API -->|SSE Stream| AI[Gemini AI Engine]
-    API <-->|Mongoose| DB[(MongoDB Atlas)]
+    API -->|GraphQL| LC["LeetCode API"]
+    API -->|REST| GH["GitHub API"]
+    API -->|SSE Stream| AI["Gemini AI Engine"]
+    API <-->|Mongoose| DB[("MongoDB Atlas")]
     
     classDef client fill:#3b82f6,stroke:#fff,stroke-width:2px,color:#fff,font-weight:bold;
     classDef server fill:#10b981,stroke:#fff,stroke-width:2px,color:#fff,font-weight:bold;
