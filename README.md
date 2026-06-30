@@ -21,17 +21,31 @@ I wanted a developer dashboard that didn't just passively show stats, but active
 | Vercel | Render | node-cache | LeetCode GraphQL |
 
 ## Key Features
+- **Multi-User Authentication:** Secure JWT-based login system allowing individual developers to maintain their own persistent stats, AI context, and dashboards.
 - **Real-Time Git & LeetCode Tracking:** Live fetching of daily commits, current streaks, and solved DSA problems.
 - **AI Coach (Gemini):** A chat interface that streams responses token-by-token (SSE) acting as a senior mentor.
 - **Resume Reviewer:** Upload your resume for an instant, critical breakdown from a "senior tech recruiter" perspective.
 - **Daily Briefings:** Automatic generation of a motivational morning brief based strictly on your yesterday vs. today stats.
 
 ## Architecture
-```text
-Frontend (Vercel)  →  Backend Proxy (Render)  →  External APIs
-(React + Hooks)       (Express + node-cache)     (GitHub, LeetCode, Gemini)
-                             ↓
-                      MongoDB (Atlas)
+```mermaid
+flowchart LR
+    UI[Frontend Client<br/>Vite + React] -->|HTTPS Requests| API(Backend API Proxy<br/>Node.js + Express)
+    
+    API -->|GraphQL| LC[LeetCode API]
+    API -->|REST| GH[GitHub API]
+    API -->|SSE Stream| AI[Gemini AI Engine]
+    API <-->|Mongoose| DB[(MongoDB Atlas)]
+    
+    classDef client fill:#3b82f6,stroke:#fff,stroke-width:2px,color:#fff,font-weight:bold;
+    classDef server fill:#10b981,stroke:#fff,stroke-width:2px,color:#fff,font-weight:bold;
+    classDef db fill:#f59e0b,stroke:#fff,stroke-width:2px,color:#fff,font-weight:bold;
+    classDef ext fill:#6366f1,stroke:#fff,stroke-width:2px,color:#fff,font-weight:bold;
+    
+    class UI client;
+    class API server;
+    class DB db;
+    class LC,GH,AI ext;
 ```
 
 ## ⚙️ Challenges & How I Solved Them
