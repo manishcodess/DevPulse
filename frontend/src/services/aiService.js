@@ -21,7 +21,7 @@ export async function streamAIChat(contents, systemInstruction) {
   return response.body;
 }
 
-export function buildSystemPrompt(githubData, leetcodeData, gfgData, userCredentials) {
+export function buildSystemPrompt(githubData, leetcodeData, userCredentials) {
   const userName = userCredentials?.name?.split(' ')[0] || "User";
   const userBio = userCredentials?.bio ? `\n  USER'S CUSTOM INSTRUCTIONS / BIO:\n  "${userCredentials.bio}"\n  (Use the above information to personalize your interactions and adapt your mentoring style to this person.)\n` : "";
   const resumeFeedback = userCredentials?.resumeContext ? `\n  USER'S LATEST RESUME FEEDBACK:\n  ${userCredentials.resumeContext}\n  (Use this resume feedback to guide their coaching, suggest keyword additions, or help fix weak points.)\n` : "";
@@ -33,8 +33,6 @@ export function buildSystemPrompt(githubData, leetcodeData, gfgData, userCredent
   - LeetCode: ${leetcodeData?.total ?? 'unknown'} problems solved
     Easy: ${leetcodeData?.easy ?? '?'} | Medium: ${leetcodeData?.medium ?? '?'} | Hard: ${leetcodeData?.hard ?? '?'}
     Current streak: ${leetcodeData?.streak ?? '?'} days
-  - GeeksforGeeks: ${gfgData?.total ?? 'unknown'} problems solved
-    Overall Coding Score: ${gfgData?.score ?? '?'}
   - GitHub: ${githubData?.weeklyCommits ?? 'unknown'} commits this week
     Public repos: ${githubData?.publicRepos ?? '?'}
   

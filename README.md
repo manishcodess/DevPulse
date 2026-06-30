@@ -17,8 +17,8 @@ This project uses a decoupled Full-Stack architecture (JAMStack):
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/manishcodess/Future-Me-AI.git
-cd Future-Me-AI
+git clone https://github.com/manishcodess/DevPulse.git
+cd DevPulse
 ```
 
 ### 2. Backend Setup

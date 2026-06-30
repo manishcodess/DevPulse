@@ -6,7 +6,11 @@ const User = require('../models/User');
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'devpulse_fallback_secret_123';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'devpulse_fallback_secret_123');
+if (!JWT_SECRET) {
+  console.error("FATAL ERROR: JWT_SECRET is not defined in production.");
+  process.exit(1);
+}
 
 // Middleware to verify token
 const verifyToken = (req, res, next) => {

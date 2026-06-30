@@ -7,7 +7,6 @@ import { API_BASE_URL } from '../config';
 export function useDevData(showToast, userCredentials = null) {
   const [githubData, setGithubData] = useState(null);
   const [leetcodeData, setLeetcodeData] = useState(null);
-  const [gfgData, setGfgData] = useState({ total: 110, score: 290 });
   const [dailyBrief, setDailyBrief] = useState("");
   const [briefLoading, setBriefLoading] = useState(true);
   const [errors, setErrors] = useState({});
@@ -36,75 +35,10 @@ export function useDevData(showToast, userCredentials = null) {
           return null;
         }
         
-        const profileRes = await fetch(`https://api.github.com/users/${username}`);
-        if(!profileRes.ok) throw new Error('Github rate limit or error');
-        const profile = await profileRes.json();
+        const res = await fetch(`${API_BASE_URL}/github/${username}/stats`);
+        if (!res.ok) throw new Error('Github rate limit or error');
         
-        const eventsRes = await fetch(`https://api.github.com/users/${username}/events`);
-        const events = await eventsRes.json();
-        
-        if (events.message && events.message.includes("API rate limit")) {
-          showToast("GitHub API rate limit exceeded! Showing cached/partial data.", "error");
-          console.warn("GitHub rate limit hit:", events.message);
-        }
-        
-        let todayCommits = 0;
-        let yesterdayCommits = 0;
-        let streak = 0;
-        let languages = new Set();
-        const currentDay = getTodayString();
-        const prevDay = getYesterdayString();
-
-        const pushEvents = (Array.isArray(events) ? events : []).filter(e => e.type === 'PushEvent');
-        
-        for (const event of pushEvents) {
-          const eventDate = event.created_at.split('T')[0];
-          const commits = event.payload.commits ? event.payload.commits.length : 0;
-          
-          if (eventDate === currentDay) {
-            todayCommits += commits;
-          } else if (eventDate === prevDay) {
-            yesterdayCommits += commits;
-          }
-        }
-        
-        if (todayCommits > 0) streak = 1;
-
-        if (profile.public_repos > 0) {
-          try {
-            const reposRes = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=10`);
-            const repos = await reposRes.json();
-            if (Array.isArray(repos)) {
-              repos.forEach(r => { if(r.language) languages.add(r.language) });
-            }
-          } catch(e) {
-            console.log("Could not fetch repos", e);
-          }
-        }
-        
-        let totalCommits = 0;
-        try {
-          const searchRes = await fetch(`https://api.github.com/search/commits?q=author:${username}`);
-          if (searchRes.ok) {
-            const searchData = await searchRes.json();
-            totalCommits = searchData.total_count || 0;
-          } else {
-            totalCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0);
-          }
-        } catch (e) {
-          totalCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0);
-        }
-
-        const freshData = {
-          username: profile.login,
-          avatarUrl: profile.avatar_url,
-          publicRepos: profile.public_repos || 0,
-          totalCommits,
-          todayCommits,
-          yesterdayCommits,
-          streak,
-          languages: Array.from(languages)
-        };
+        const freshData = await res.json();
 
         setCachedData(CACHE_KEY, freshData);
         setGithubData(freshData);
@@ -173,7 +107,6 @@ User Data:
 - Total GitHub commits: ${ghData?.totalCommits || 0}
 
 - LeetCode solved: ${lcData?.total || 0}
-- GFG solved: ${gfgData?.total || 110}
 - Current DSA streak: ${lcData?.streak || 0}
 
 - Goal: Land a 20+ LPA SDE role by 2026
@@ -223,6 +156,6 @@ Maximum 70 words.`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userCredentials]);
 
-  return { githubData, leetcodeData, gfgData, dailyBrief, briefLoading, errors };
+  return { githubData, leetcodeData, dailyBrief, briefLoading, errors };
 }
         

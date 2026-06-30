@@ -58,7 +58,7 @@ function App() {
     showToast(`Profiles linked successfully!`);
   };
 
-  const { githubData, leetcodeData, gfgData, dailyBrief, briefLoading } = useDevData(showToast, userCredentials);
+  const { githubData, leetcodeData, dailyBrief, briefLoading } = useDevData(showToast, userCredentials);
   
   const {
     messages,
@@ -70,7 +70,7 @@ function App() {
     inputRef,
     submitMessage,
     scrollToBottom
-  } = useChat(githubData, leetcodeData, gfgData, userCredentials);
+  } = useChat(githubData, leetcodeData, userCredentials);
 
   const {
     resumeAnalysis,
@@ -148,7 +148,6 @@ function App() {
         setIsPanelOpen={setIsPanelOpen}
         githubData={githubData} 
         leetcodeData={leetcodeData} 
-        gfgData={gfgData} 
         userCredentials={userCredentials}
       />
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Zap, ExternalLink, Menu } from 'lucide-react';
 
-export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, gfgData, userCredentials }) {
+export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials }) {
   return (
     <aside className={`left-panel ${!isPanelOpen ? 'closed' : ''}`}>
       <div style={{ display: 'flex', flexDirection: isPanelOpen ? 'row' : 'column-reverse', alignItems: 'center', justifyContent: isPanelOpen ? 'space-between' : 'center', gap: isPanelOpen ? '0' : '16px', padding: isPanelOpen ? '16px' : '16px 0', borderBottom: '1px solid var(--border-subtle)', minHeight: '72px' }}>
@@ -84,13 +84,12 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
               <span style={{ fontSize: '32px', fontWeight: 'bold', color:'green' , letterSpacing: '-1px' }}>
-                {(leetcodeData?.total ?? 0) + (gfgData?.total ?? 0)}
+                {leetcodeData?.total ?? 0}
               </span>
               <span style={{ fontSize: '15px', color: 'var(--text-muted)' }}>total solved</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '4px' }}>
               <span className="pill" style={{ fontSize: '11px', padding: '4px 8px' }}>LeetCode: {leetcodeData?.total ?? 0}</span>
-              <span className="pill" style={{ fontSize: '11px', padding: '4px 8px' }}>GFG: {gfgData?.total ?? 0}</span>
             </div>
           </div>
         </div>

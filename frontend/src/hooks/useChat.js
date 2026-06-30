@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { streamAIChat, buildSystemPrompt } from '../services/aiService';
 
-export function useChat(githubData, leetcodeData, gfgData, userCredentials) {
+export function useChat(githubData, leetcodeData, userCredentials) {
   const userName = userCredentials?.name?.split(' ')[0] || "User";
   const [messages, setMessages] = useState([
     { 
@@ -30,7 +30,7 @@ export function useChat(githubData, leetcodeData, gfgData, userCredentials) {
     setIsLoading(true);
 
     try {
-      const systemInstruction = buildSystemPrompt(githubData, leetcodeData, gfgData, userCredentials);
+      const systemInstruction = buildSystemPrompt(githubData, leetcodeData, userCredentials);
       const stream = await streamAIChat(userMessage, systemInstruction);
       
       let fullText = '';

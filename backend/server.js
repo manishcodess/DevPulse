@@ -3,12 +3,34 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
+const NodeCache = require('node-cache');
 const authRoutes = require('./routes/auth');
 const aiRoutes = require('./routes/ai');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*'
+}));
 app.use(express.json());
+
+// Initialize cache with 1 hour TTL
+const cache = new NodeCache({ stdTTL: 3600 });
+
+// Cache middleware
+const cacheMiddleware = (keyPrefix) => (req, res, next) => {
+  const { username } = req.params;
+  const key = `${keyPrefix}-${username}`;
+  const cachedData = cache.get(key);
+  if (cachedData) {
+    return res.json(cachedData);
+  }
+  res.sendResponse = res.json;
+  res.json = (body) => {
+    cache.set(key, body);
+    res.sendResponse(body);
+  };
+  next();
+};
 
 // MongoDB Connection
 let isDbConnected = false;
@@ -24,11 +46,18 @@ async function connectDB() {
 }
 connectDB();
 
+app.use((req, res, next) => {
+  if (!isDbConnected && req.path.startsWith('/api/')) {
+    return res.status(503).json({ error: 'Database not connected yet. Please try again in a few seconds.' });
+  }
+  next();
+});
+
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 
-app.post('/api/leetcode/:username', async (req, res) => {
+app.post('/api/leetcode/:username', cacheMiddleware('leetcode'), async (req, res) => {
   try {
     const { username } = req.params;
     const LEETCODE_QUERY = `
@@ -69,25 +98,88 @@ app.post('/api/leetcode/:username', async (req, res) => {
   }
 });
 
-app.get('/api/github/:username/stats', async (req, res) => {
+app.get('/api/github/:username/stats', cacheMiddleware('github'), async (req, res) => {
   try {
     const { username } = req.params;
-    const readmeStatsRes = await fetch(`https://github-readme-stats.vercel.app/api?username=${username}&include_all_commits=true`);
-    const readmeSvg = await readmeStatsRes.text();
-    const commitsMatch = readmeSvg.match(/data-testid="commits"[^>]*>\s*([\d,]+)\s*<\/text>/i);
-    const totalCommits = commitsMatch ? (parseInt(commitsMatch[1].replace(/,/g, '')) + 63).toString() : '--';
 
-    const streakRes = await fetch(`https://github-readme-streak-stats.herokuapp.com/?user=${username}`);
-    const streakSvg = await streakRes.text();
-    const streakMatch = streakSvg.match(/Current Streak.*?<text[^>]*>\s*([\d,]+)\s*<\/text>/is) || streakSvg.match(/data-testid="current-streak"[^>]*>\s*([\d]+)/is) || streakSvg.match(/Current Streak.*?([\d]+)/is);
-    const streak = streakMatch ? streakMatch[1] : '--';
+    const githubHeaders = {};
+    if (process.env.GITHUB_TOKEN) {
+      githubHeaders['Authorization'] = `Bearer ${process.env.GITHUB_TOKEN}`;
+    }
 
-    const langRes = await fetch(`https://github-readme-stats.vercel.app/api/top-langs/?username=${username}`);
-    const langSvg = await langRes.text();
-    const langMatches = [...langSvg.matchAll(/data-testid="lang-name"[^>]*>\s*([^<]+)\s*<\/text>/gi)];
-    const languages = langMatches.map(m => m[1]).slice(0, 3);
+    // 1. Get profile (repos & avatar)
+    const profileRes = await fetch(`https://api.github.com/users/${username}`, { headers: githubHeaders });
+    if (!profileRes.ok) throw new Error('Github rate limit or error');
+    const profile = await profileRes.json();
+    const publicRepos = profile.public_repos || 0;
+    const avatarUrl = profile.avatar_url;
 
-    res.json({ totalCommits, streak, languages });
+    // 2. Get events (today commits, yesterday commits, streak)
+    const eventsRes = await fetch(`https://api.github.com/users/${username}/events`, { headers: githubHeaders });
+    const events = await eventsRes.json();
+
+    let todayCommits = 0;
+    let yesterdayCommits = 0;
+    let streak = 0;
+    
+    // Helper to format Date to YYYY-MM-DD
+    const getFormattedDate = (date) => date.toISOString().split('T')[0];
+    const currentDay = getFormattedDate(new Date());
+    const prevDay = getFormattedDate(new Date(Date.now() - 86400000));
+
+    const pushEvents = (Array.isArray(events) ? events : []).filter(e => e.type === 'PushEvent');
+    
+    for (const event of pushEvents) {
+      const eventDate = event.created_at.split('T')[0];
+      const commits = event.payload.commits ? event.payload.commits.length : 0;
+      
+      if (eventDate === currentDay) {
+        todayCommits += commits;
+      } else if (eventDate === prevDay) {
+        yesterdayCommits += commits;
+      }
+    }
+    
+    if (todayCommits > 0) streak = 1;
+
+    // 3. Get top languages from repos
+    let languages = new Set();
+    if (publicRepos > 0) {
+      try {
+        const reposRes = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=10`, { headers: githubHeaders });
+        const repos = await reposRes.json();
+        if (Array.isArray(repos)) {
+          repos.forEach(r => { if (r.language) languages.add(r.language) });
+        }
+      } catch (e) {
+        console.error("Could not fetch repos", e);
+      }
+    }
+
+    // 4. Get total commits
+    let totalCommits = 0;
+    try {
+      const searchRes = await fetch(`https://api.github.com/search/commits?q=author:${username}`, { headers: githubHeaders });
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        totalCommits = searchData.total_count || 0;
+      } else {
+        totalCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0);
+      }
+    } catch (e) {
+      totalCommits = pushEvents.reduce((acc, ev) => acc + (ev.payload.commits?.length || 0), 0);
+    }
+
+    res.json({
+      username: profile.login,
+      avatarUrl,
+      publicRepos,
+      totalCommits,
+      todayCommits,
+      yesterdayCommits,
+      streak,
+      languages: Array.from(languages)
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
