@@ -1,11 +1,14 @@
 <p align="center">
-  <img src="logo.png" alt="DevPulse Logo" width="400" />
+  <a href="https://ai-dev-pulse.vercel.app" target="_blank">
+    <img src="logo.png" alt="DevPulse Logo" width="400" />
+  </a>
 </p>
-> An AI mentor that tracks your real GitHub/LeetCode activity and coaches you like a senior engineer.
+<p align="center">
+  <em>An AI mentor that tracks your real GitHub/LeetCode activity and coaches you like a senior engineer.</em>
+</p>
 
-## Live Demo
-**[View Live Demo Here](#)**  
-*(Insert a 10-second GIF or screenshot here showing the streaming chat and dashboard loading)*
+## 🚀 Live Demo
+**👉 [Experience DevPulse Live](https://ai-dev-pulse.vercel.app)** 
 
 ## Why I Built This
 I wanted a developer dashboard that didn't just passively show stats, but actively used them to provide personalized mentorship. I deliberately skipped complex RAG (Retrieval-Augmented Generation) setups, opting instead for dynamic, real-time prompt generation to keep the architecture fast, lean, and highly personalized for each user.
