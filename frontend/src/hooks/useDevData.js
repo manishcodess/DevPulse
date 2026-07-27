@@ -1,161 +1,111 @@
 import { useState, useEffect } from 'react';
 import { generateAIContent } from '../services/aiService';
 import { getCachedData, setCachedData } from '../utils/storage';
-import { getTodayString, getYesterdayString } from '../utils/date';
 import { API_BASE_URL } from '../config';
 
+// useDevData fetches GitHub and LeetCode stats for the logged-in user,
+// then uses that data to generate a personalized AI daily brief.
+// It re-runs every time userCredentials changes (e.g. after login).
 export function useDevData(showToast, userCredentials = null) {
-  const [githubData, setGithubData] = useState(null);
+  const [githubData, setGithubData]   = useState(null);
   const [leetcodeData, setLeetcodeData] = useState(null);
-  const [dailyBrief, setDailyBrief] = useState("");
+  const [dailyBrief, setDailyBrief]   = useState('');
   const [briefLoading, setBriefLoading] = useState(true);
-  const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    // Clear old data when user changes to prevent showing fallback info
-    if (userCredentials) {
-      setGithubData(null);
-      setLeetcodeData(null);
-    }
-    
+    // Reset data when user changes so we don't briefly show the wrong person's stats
+    setGithubData(null);
+    setLeetcodeData(null);
+
     const fetchGithubData = async () => {
+      const username = userCredentials?.github;
+      if (!username) return null;
+
+      // Check localStorage cache first (15-minute TTL) to avoid redundant API calls
+      const cacheKey = `devpulse-github-${username}`;
+      const cached = getCachedData(cacheKey, 15);
+      if (cached) { setGithubData(cached); return cached; }
+
       try {
-        const username = userCredentials?.github;
-        const CACHE_KEY = `devpulse-github-cache-v2-${username || 'anon'}`;
-        
-        if (!userCredentials) {
-          const cached = getCachedData(CACHE_KEY, 15);
-          if (cached) {
-            setGithubData(cached);
-            return cached;
-          }
-        }
-
-        if (!username || username.trim() === '') {
-          return null;
-        }
-        
         const res = await fetch(`${API_BASE_URL}/github/${username}/stats`);
-        if (!res.ok) throw new Error('Github rate limit or error');
-        
-        const freshData = await res.json();
-
-        setCachedData(CACHE_KEY, freshData);
-        setGithubData(freshData);
-        showToast("GitHub data loaded ✓");
-        return freshData;
+        if (!res.ok) throw new Error('GitHub fetch failed');
+        const data = await res.json();
+        setCachedData(cacheKey, data);
+        setGithubData(data);
+        showToast('GitHub data loaded ✓');
+        return data;
       } catch {
-        setErrors(prev => ({...prev, github: true}));
+        showToast('Could not load GitHub data', 'error');
         return null;
       }
     };
 
     const fetchLeetcodeData = async () => {
+      const username = userCredentials?.leetcode;
+      if (!username) return null;
+
+      const cacheKey = `devpulse-leetcode-${username}`;
+      const cached = getCachedData(cacheKey, 15);
+      if (cached) { setLeetcodeData(cached); return cached; }
+
       try {
-        const username = userCredentials?.leetcode;
-        const CACHE_KEY = `devpulse-leetcode-cache-v2-${username || 'anon'}`;
-        
-        if (!userCredentials) {
-          const cached = getCachedData(CACHE_KEY, 15);
-          if (cached) {
-            setLeetcodeData(cached);
-            return cached;
-          }
-        }
-
-        if (!username || username.trim() === '') {
-          return null;
-        }
-
-        const solvedRes = await fetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST' });
-        if (!solvedRes.ok) throw new Error("Leetcode API error");
-        const solvedData = await solvedRes.json();
-        
-        if (solvedData.error) throw new Error("Leetcode user not found");
-
-        const freshData = {
-          total: solvedData.total || 0,
-          easy: solvedData.easy || 0,
-          medium: solvedData.medium || 0,
-          hard: solvedData.hard || 0,
-          streak: 0
-        };
-
-        setCachedData(CACHE_KEY, freshData);
-        setLeetcodeData(freshData);
-        showToast("LeetCode data loaded ✓");
-        return freshData;
+        // LeetCode route is POST because the backend calls LeetCode's GraphQL API
+        const res = await fetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST' });
+        if (!res.ok) throw new Error('LeetCode fetch failed');
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const formatted = { total: data.total || 0, easy: data.easy || 0, medium: data.medium || 0, hard: data.hard || 0, streak: 0 };
+        setCachedData(cacheKey, formatted);
+        setLeetcodeData(formatted);
+        showToast('LeetCode data loaded ✓');
+        return formatted;
       } catch {
-        setErrors(prev => ({...prev, leetcode: true}));
+        showToast('Could not load LeetCode data', 'error');
         return null;
       }
     };
 
     const generateDailyBrief = async (ghData, lcData) => {
-      try {
-        const userName = "Developer";
-        const prompt = `You are DevPulse, an AI developer mentor.
+      const firstName = userCredentials?.name?.split(' ')[0] || 'Developer';
+      const prompt = `You are DevPulse, an AI developer mentor.
 
-Generate today's Daily Brief for the user using ONLY the provided real-time data.
-
-User Data:
-- Name: ${userName}
+Generate a Daily Brief for ${firstName} using ONLY this real data:
 - GitHub commits today: ${ghData?.todayCommits || 0}
-- GitHub commits yesterday: ${ghData?.yesterdayCommits || 0}
-- Weekly commits: ${ghData?.weeklyCommits || 'unknown'}
-- GitHub streak: ${ghData?.streak || 0}
+- GitHub commits yesterday: ${ghData?.yesterdayCommits || 0}  
 - Total GitHub commits: ${ghData?.totalCommits || 0}
+- Current GitHub streak: ${ghData?.streak || 0} days
+- LeetCode problems solved: ${lcData?.total || 0}
 
-- LeetCode solved: ${lcData?.total || 0}
-- Current DSA streak: ${lcData?.streak || 0}
+Rules:
+- Start by greeting ${firstName} by name
+- Mention one positive thing first, even if progress is small
+- Comment on today's vs yesterday's activity honestly
+- If on a streak, celebrate it; if no activity today, acknowledge it without guilt
+- End with ONE motivating sentence
+- Maximum 70 words — NO bullet points, NO raw numbers, write like a mentor
 
-- Goal: Land a 20+ LPA SDE role by 2026
+Never sound robotic. Write specifically for this developer.`;
 
-Write the Daily Brief like a senior mentor checking in.
-
-Requirements:
-
-• Start by greeting the user by name.
-• Mention one positive thing first, even if progress is small.
-• Mention coding consistency based on today's and yesterday's activity.
-• Mention total DSA progress naturally.
-• If there was no activity today, acknowledge it without guilt.
-• If the user is on a streak, celebrate it.
-• If consistency is improving, mention it.
-• If consistency is declining, mention it honestly but positively.
-• End with ONE motivating sentence.
-
-Never sound robotic.
-Never list raw statistics.
-Never use bullet points.
-Never use generic motivational quotes.
-
-The response should feel like it was written specifically for this developer.
-
-Maximum 70 words.`;
-
+      try {
         const text = await generateAIContent(prompt);
         setDailyBrief(text);
-        showToast("Daily brief generated ✓");
+        showToast('Daily brief ready ✓');
       } catch {
-        setDailyBrief("Ready to level up your skills today? Let's focus on the big picture.");
+        setDailyBrief("Ready to level up today? Let's focus on consistent progress.");
       } finally {
         setBriefLoading(false);
       }
     };
-    
-    const initializeApp = async () => {
-      const [ghData, lcData] = await Promise.all([
-        fetchGithubData(),
-        fetchLeetcodeData()
-      ]);
-      generateDailyBrief(ghData, lcData);
+
+    // Fetch both in parallel, then generate the brief once both resolve
+    const initialize = async () => {
+      const [ghData, lcData] = await Promise.all([fetchGithubData(), fetchLeetcodeData()]);
+      await generateDailyBrief(ghData, lcData);
     };
 
-    initializeApp();
+    initialize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userCredentials]);
 
-  return { githubData, leetcodeData, dailyBrief, briefLoading, errors };
+  return { githubData, leetcodeData, dailyBrief, briefLoading };
 }
-        
