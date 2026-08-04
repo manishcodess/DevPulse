@@ -51,6 +51,17 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
         Log Out
       </button>
 
+      {/* GitHub Summary */}
+      {githubData && (
+        <div className="github-summary" style={{ marginBottom: '12px', textAlign: 'center' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+            Repos: {githubData.publicRepos} | Commits: {githubData.totalCommits} | Streak: {githubData.streak}
+          </div>
+          <a href={`https://github.com/${githubData?.username || userCredentials?.github || 'github'}`} target="_blank" rel="noreferrer" style={{ marginTop: '6px', display: 'inline-block', color: 'var(--primary)', textDecoration: 'underline' }}>
+            View GitHub
+          </a>
+        </div>
+      )}
       <div className="sidebar-content">
         <div className="integration-card">
           <div className="card-header">
@@ -98,16 +109,37 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
             <span className="card-label">PROBLEM SOLVING</span>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span style={{ fontSize: '32px', fontWeight: 'bold', color:'green' , letterSpacing: '-1px' }}>
-                {leetcodeData?.total ?? 0}
-              </span>
-              <span style={{ fontSize: '15px', color: 'var(--text-muted)' }}>total solved</span>
+          {/* LeetCode Detailed Summary */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            {/* Total Solved */}
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--primary)' }}>
+              {leetcodeData?.total ?? 0} Problems Solved
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '4px' }}>
-              <span className="pill" style={{ fontSize: '11px', padding: '4px 8px' }}>LeetCode: {leetcodeData?.total ?? 0}</span>
+            {/* Difficulty Graph */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                Easy {" ".repeat(10 - Math.min(leetcodeData?.easy ?? 0, 10))}█{"█".repeat(Math.min(leetcodeData?.easy ?? 0, 10))} {leetcodeData?.easy ?? 0}
+              </div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                Medium {" ".repeat(10 - Math.min(leetcodeData?.medium ?? 0, 10))}█{"█".repeat(Math.min(leetcodeData?.medium ?? 0, 10))} {leetcodeData?.medium ?? 0}
+              </div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+                Hard {" ".repeat(10 - Math.min(leetcodeData?.hard ?? 0, 10))}█{"█".repeat(Math.min(leetcodeData?.hard ?? 0, 10))} {leetcodeData?.hard ?? 0}
+              </div>
             </div>
+            {/* Contest Rating */}
+            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>🏅 Contest Rating</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Rating {leetcodeData?.rating ?? '--'}</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Top {leetcodeData?.top ?? '--'}%</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Global Rank {leetcodeData?.globalRank ?? '--'}</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Highest Rating {leetcodeData?.highestRating ?? '--'}</div>
+            </div>
+            {/* View Profile Link */}
+            <a href={leetcodeData?.profileUrl || `https://leetcode.com/${leetcodeData?.username || ''}`} target="_blank" rel="noreferrer"
+               style={{ marginTop: '6px', color: 'var(--primary)', textDecoration: 'underline', fontSize: '14px' }}>
+              View Profile
+            </a>
           </div>
         </div>
       </div>
