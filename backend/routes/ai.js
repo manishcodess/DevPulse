@@ -3,63 +3,52 @@ const { GoogleGenAI } = require('@google/genai');
 
 const router = express.Router();
 
-// POST /api/ai/generate - Used for one-off content generation (Resume, Daily Brief)
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const AI_MODEL = 'gemini-3.1-flash-lite';
+
+// ─── POST /api/ai/generate (One-shot) ─────────────────────────────────────────
 router.post('/generate', async (req, res) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const { contents } = req.body;
-    
-    if (!contents) {
-      return res.status(400).json({ error: "Missing 'contents' in request body." });
-    }
+    if (!contents) return res.status(400).json({ error: "Missing 'contents'" });
 
     const result = await ai.models.generateContent({
-      model: "gemini-3.1-flash-lite",
-      contents: contents
+      model: AI_MODEL,
+      contents,
     });
 
     res.json({ text: result.text });
   } catch (error) {
-    console.error("AI Generate Error:", error);
-    res.status(500).json({ error: error.message || "Failed to generate AI content" });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// POST /api/ai/chat - Used for streaming chat responses using SSE
+// ─── POST /api/ai/chat (Super Simple Text Streaming) ─────────────────────────
+// Streams text chunks directly as Gemini generates them
 router.post('/chat', async (req, res) => {
   const { contents, systemInstruction } = req.body;
-  if (!contents) {
-    return res.status(400).json({ error: "Missing 'contents' in request body." });
-  }
+  if (!contents) return res.status(400).json({ error: "Missing 'contents'" });
 
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  
-  // Necessary for CORS and proxies
-  res.flushHeaders();
+  // Set header to plain text streaming
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const responseStream = await ai.models.generateContentStream({
-      model: "gemini-3.1-flash-lite",
-      contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-      },
+    const stream = await ai.models.generateContentStream({
+      model: AI_MODEL,
+      contents,
+      config: { systemInstruction },
     });
 
-    for await (const chunk of responseStream) {
+    // Send text chunks directly to client as they arrive
+    for await (const chunk of stream) {
       if (chunk.text) {
-        res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
+        res.write(chunk.text);
       }
     }
-    res.write('data: [DONE]\n\n');
-    res.end();
+
+    res.end(); // Finish response stream
   } catch (error) {
-    console.error("AI Chat Stream Error:", error);
-    res.write(`data: ${JSON.stringify({ error: error.message || "Stream failed" })}\n\n`);
-    res.end();
+    res.status(500).json({ error: error.message });
   }
 });
 
