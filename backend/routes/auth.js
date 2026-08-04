@@ -31,17 +31,25 @@ const formatUser = (user) => ({
   resumeContext: user.resumeContext,
 });
 
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 // verifyToken runs BEFORE any protected route handler.
-// It checks the Authorization header, verifies the JWT signature,
-// and attaches the user's ID to req.userId so the route can use it.
-//
-// Header format expected: "Authorization: Bearer <token>"
+// It checks cookies first, then falls back to Authorization header.
 const verifyToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) return res.status(403).json({ error: 'No token provided' });
+  let token = req.cookies?.devpulse_token;
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader) token = authHeader.split(' ')[1];
+  }
 
-  const token = authHeader.split(' ')[1]; // "Bearer <token>" → grab the token part
+  if (!token) return res.status(403).json({ error: 'No token provided' });
+
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return res.status(401).json({ error: 'Invalid or expired token' });
     req.userId = decoded.id; // Attach the user ID so route handlers can use it
@@ -50,27 +58,20 @@ const verifyToken = (req, res, next) => {
 };
 
 // ─── POST /api/auth/signup ────────────────────────────────────────────────────
-// Creates a new user account.
-// Hashes the password with bcrypt before storing — we NEVER store plain-text passwords.
-// Returns a JWT token + user data so the frontend can log them in immediately.
+// Creates a new user account and sets HttpOnly cookie.
 router.post('/signup', async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Check if email is already registered
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'Email already in use' });
 
-    // bcrypt.hash(password, 10) — the 10 is the "salt rounds".
-    // Higher = more secure but slower. 10 is the industry standard sweet spot.
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({ name, email, password: hashedPassword });
 
-    // Sign a JWT that expires in 7 days.
-    // The payload { id: user._id } is what we decode later in verifyToken.
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
 
+    res.cookie('devpulse_token', token, COOKIE_OPTIONS);
     res.status(201).json({ token, user: formatUser(user) });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -78,7 +79,7 @@ router.post('/signup', async (req, res) => {
 });
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
-// Verifies email + password and returns a new JWT token.
+// Verifies email + password and sets HttpOnly cookie.
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -86,22 +87,27 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // bcrypt.compare hashes the entered password and compares it to the stored hash.
-    // We never "decrypt" the stored password — that's impossible by design.
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
 
+    res.cookie('devpulse_token', token, COOKIE_OPTIONS);
     res.json({ token, user: formatUser(user) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
+// ─── POST /api/auth/logout ────────────────────────────────────────────────────
+// Clears the HttpOnly authentication cookie.
+router.post('/logout', (req, res) => {
+  res.clearCookie('devpulse_token', COOKIE_OPTIONS);
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
 // ─── GET /api/auth/me ─────────────────────────────────────────────────────────
-// Returns the currently logged-in user's data.
-// Used on app load to restore session from a saved token in localStorage.
+// Returns the currently logged-in user's data from cookie or token.
 router.get('/me', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.userId);

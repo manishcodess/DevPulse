@@ -23,13 +23,13 @@ export default function Login({ onLogin, onSwitchToSignup }) {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(formData)
       });
       
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Login failed');
       
-      localStorage.setItem('devpulse_token', data.token);
       onLogin(data.user);
     } catch (err) {
       setError(err.message);

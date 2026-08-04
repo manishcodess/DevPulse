@@ -1,7 +1,7 @@
 import React from 'react';
 import { Zap, ExternalLink, Menu } from 'lucide-react';
 
-export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials }) {
+export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout }) {
   return (
     <aside className={`left-panel ${!isPanelOpen ? 'closed' : ''}`}>
       <div style={{ display: 'flex', flexDirection: isPanelOpen ? 'row' : 'column-reverse', alignItems: 'center', justifyContent: isPanelOpen ? 'space-between' : 'center', gap: isPanelOpen ? '0' : '16px', padding: isPanelOpen ? '16px' : '16px 0', borderBottom: '1px solid var(--border-subtle)', minHeight: '72px' }}>
@@ -33,6 +33,23 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
           </div>
         </div>
       </div>
+      {/* Logout Button */}
+      <button
+        onClick={logout}
+        style={{
+          marginTop: '12px',
+          width: '100%',
+          padding: '8px',
+          background: 'var(--danger)',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: '600'
+        }}
+      >
+        Log Out
+      </button>
 
       <div className="sidebar-content">
         <div className="integration-card">

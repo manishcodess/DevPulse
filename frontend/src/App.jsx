@@ -26,25 +26,26 @@ function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // ─── Cookie‑based auth check ───────────────────────────────────────
   useEffect(() => {
-    const token = localStorage.getItem('devpulse_token');
-    if (token) {
-      fetch(`${API_BASE_URL}/auth/me`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+    // No token needed; the auth cookie (HttpOnly) is sent automatically
+    fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.user) {
           setUserCredentials(data.user);
           setIsAuthenticated(true);
         } else {
-          localStorage.removeItem('devpulse_token');
+          // If the server responded without a user, ensure the UI reflects logged‑out state
+          setIsAuthenticated(false);
+          setUserCredentials(null);
         }
       })
       .catch(err => {
-        console.error("Auth check failed:", err);
+        console.error('Auth check failed:', err);
+        setIsAuthenticated(false);
+        setUserCredentials(null);
       });
-    }
   }, []);
 
   const handleAuth = (data) => {
@@ -56,6 +57,19 @@ function App() {
   const handleOnboardingComplete = (data) => {
     setUserCredentials(data);
     showToast(`Profiles linked successfully!`);
+  };
+  // Logout handler that clears HttpOnly cookie via backend
+  const handleLogout = () => {
+    fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
+      .then(() => {
+        setIsAuthenticated(false);
+        setUserCredentials(null);
+        showToast('Logged out successfully', 'info');
+      })
+      .catch(err => {
+        console.error('Logout failed:', err);
+        showToast('Logout failed', 'error');
+      });
   };
 
   const { githubData, leetcodeData, dailyBrief, briefLoading } = useDevData(showToast, userCredentials);
@@ -149,6 +163,7 @@ function App() {
         githubData={githubData} 
         leetcodeData={leetcodeData} 
         userCredentials={userCredentials}
+        logout={handleLogout}
       />
 
       <div className="mobile-header">
