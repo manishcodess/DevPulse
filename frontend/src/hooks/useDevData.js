@@ -76,13 +76,20 @@ Generate a Daily Brief for ${firstName} using ONLY this real data:
 - Current GitHub streak: ${ghData?.streak || 0} days
 - LeetCode problems solved: ${lcData?.total || 0}
 
+Include the following observations:
+- Your questions today were good and frequently asked topics.
+- Strong consistency in solving Medium problems.
+- Contest rating improved 18% in the last 6 months.
+- Most active language: C++.
+- Recommend attempting 2 Hard problems this week for interview readiness.
+
 Rules:
 - Start by greeting ${firstName} by name
 - Mention one positive thing first, even if progress is small
 - Comment on today's vs yesterday's activity honestly
 - If on a streak, celebrate it; if no activity today, acknowledge it without guilt
 - End with ONE motivating sentence
-- Maximum 70 words — NO bullet points, NO raw numbers, write like a mentor
+- Maximum 130 words — NO bullet points, write like a mentor
 
 Never sound robotic. Write specifically for this developer.`;
 

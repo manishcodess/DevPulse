@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bot } from 'lucide-react';
 
-export default function RightPanel({ dailyBrief, briefLoading }) {
+export default function RightPanel({ dailyBrief, briefLoading, recentActivity }) {
   return (
     <aside className="right-panel" style={{ padding: '20px', overflowY: 'auto' }}>
       <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quick Overview</div>
