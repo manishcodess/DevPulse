@@ -4,7 +4,7 @@ import { generateAIContent } from '../../services/aiService';
 import { readFileAsBase64, readFileAsText } from '../../utils/file';
 import { API_BASE_URL } from '../../config';
 
-export default function Onboarding({ onComplete }) {
+export default function Onboarding({ onComplete, onSkip }) {
   const [formData, setFormData] = useState({
     github: '',
     leetcode: '',
@@ -37,16 +37,10 @@ export default function Onboarding({ onComplete }) {
       
       Give feedback in exactly this format:
       SCORE: X/10
+      so behav like a senior software develper having 10 yoe and u got a resume of a fresher so tell only 10 things to improve geniunly so 
+      that will help to increase the ats not everything if its needed other wise no needed and tell stron gpoints in the paragrah
       
-      STRONG POINTS (3 bullet points):
-      - 
-      
-      WEAK POINTS (3 bullet points):
-      - 
-      MISSING KEYWORDS (comma separated, max 8):if have that only otherise dont mention in response
-      
-      ONE LINE VERDICT:
-      be good and answer like its your younger bro and suggeste things that are achievable and doable`;
+      `;
         
         const parts = [{ text: promptText }];
         if (resumeFile.type === "application/pdf") {
@@ -194,24 +188,40 @@ export default function Onboarding({ onComplete }) {
             </div>
           </div>
 
-          <button 
-            type="submit" 
-            className={`auth-submit-btn ${isSubmitting ? 'loading' : ''}`}
-            disabled={isSubmitting}
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', marginTop: '16px' }}
-          >
-            {isSubmitting ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div className="auth-spinner"></div>
-                <span style={{ fontSize: '14px' }}>{loadingText}</span>
-              </div>
-            ) : (
-              <>
-                Save & Continue
-                <ArrowRight size={18} className="btn-icon" />
-              </>
-            )}
-          </button>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+              <button 
+                type="submit" 
+                className={`auth-submit-btn ${isSubmitting ? 'loading' : ''}`} 
+                disabled={isSubmitting}
+                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', flex: '1' }}
+              >
+                {isSubmitting ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="auth-spinner"></div>
+                    <span style={{ fontSize: '14px' }}>{loadingText}</span>
+                  </div>
+                ) : (
+                  <>
+                    Save & Continue
+                    <ArrowRight size={18} className="btn-icon" />
+                  </>
+                )}
+              </button>
+              <button 
+                type="button" 
+                onClick={onSkip}
+                style={{
+                  background: 'var(--surface-2)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  flex: '1',
+                  cursor: 'pointer',
+                }}
+              >
+                Skip
+              </button>
+            </div>
         </form>
       </div>
     </div>

@@ -54,9 +54,16 @@ function App() {
     showToast(`Welcome, ${data.name.split(' ')[0]}!`);
   };
 
+  const [skipOnboarding, setSkipOnboarding] = useState(false);
+
   const handleOnboardingComplete = (data) => {
     setUserCredentials(data);
     showToast(`Profiles linked successfully!`);
+  };
+
+  const handleOnboardingSkip = () => {
+    setSkipOnboarding(true);
+    showToast('Onboarding skipped. You can connect accounts later.');
   };
   // Logout handler that clears HttpOnly cookie via backend
   const handleLogout = () => {
@@ -139,11 +146,11 @@ function App() {
     );
   }
 
-  if (isAuthenticated && (!userCredentials?.github || !userCredentials?.leetcode)) {
+  if (isAuthenticated && (!userCredentials?.github || !userCredentials?.leetcode) && !skipOnboarding) {
     return (
       <>
         <Toast toast={toast} />
-        <Onboarding onComplete={handleOnboardingComplete} />
+        <Onboarding onComplete={handleOnboardingComplete} onSkip={handleOnboardingSkip} />
       </>
     );
   }
@@ -164,6 +171,7 @@ function App() {
         leetcodeData={leetcodeData} 
         userCredentials={userCredentials}
         logout={handleLogout}
+        setUserCredentials={setUserCredentials}
       />
 
       <div className="mobile-header">

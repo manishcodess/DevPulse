@@ -1,7 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Zap, ExternalLink, Menu } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
-export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout }) {
+export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout, setUserCredentials }) {
+  const [githubInput, setGithubInput] = useState('');
+  const [leetcodeInput, setLeetcodeInput] = useState('');
+  const [githubConnecting, setGithubConnecting] = useState(false);
+  const [leetcodeConnecting, setLeetcodeConnecting] = useState(false);
+
+  const connectService = async (type) => {
+    const token = localStorage.getItem('devpulse_token');
+    const body = {};
+    if (type === 'github') body.githubUsername = githubInput;
+    else if (type === 'leetcode') body.leetcodeUsername = leetcodeInput;
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/onboard`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to connect');
+      // Update user credentials with new data
+      setUserCredentials(prev => ({ ...prev, ...data.user }));
+    } catch (err) {
+      console.error(err);
+      // Could add toast here via a passed showToast, omitted for brevity
+    }
+  };
+
   return (
     <aside className={`left-panel ${!isPanelOpen ? 'closed' : ''}`}>
       <div style={{ display: 'flex', flexDirection: isPanelOpen ? 'row' : 'column-reverse', alignItems: 'center', justifyContent: isPanelOpen ? 'space-between' : 'center', gap: isPanelOpen ? '0' : '16px', padding: isPanelOpen ? '16px' : '16px 0', borderBottom: '1px solid var(--border-subtle)', minHeight: '72px' }}>
@@ -62,6 +92,51 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
           </a>
         </div>
       )}
+
+      {/* Connection prompts */}
+      {(!githubData || !leetcodeData) && (
+        <div style={{ marginTop: '12px', padding: '12px', background: 'var(--surface-1)', borderRadius: '8px' }}>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '8px' }}>
+            Connect your LeetCode and GitHub for a seamless AI coach experience.
+          </p>
+          {!githubData && (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input
+                placeholder="GitHub Username"
+                value={githubInput}
+                onChange={(e) => setGithubInput(e.target.value)}
+                style={{ flex: '1', padding: '6px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+              />
+              <button
+                onClick={() => { setGithubConnecting(true); connectService('github').finally(() => setGithubConnecting(false)); }}
+                disabled={!githubInput || githubConnecting}
+                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}
+              >
+                Activate
+              </button>
+            </div>
+          )}
+          {!leetcodeData && (
+            <div style={{ display: 'flex', gap: '8px' }}
+              >
+              <input
+                placeholder="LeetCode Username"
+                value={leetcodeInput}
+                onChange={(e) => setLeetcodeInput(e.target.value)}
+                style={{ flex: '1', padding: '6px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+              />
+              <button
+                onClick={() => { setLeetcodeConnecting(true); connectService('leetcode').finally(() => setLeetcodeConnecting(false)); }}
+                disabled={!leetcodeInput || leetcodeConnecting}
+                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}
+              >
+                Activate
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="sidebar-content">
         <div className="integration-card">
           <div className="card-header">
