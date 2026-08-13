@@ -16,8 +16,21 @@ const app = express();
 const { redis } = require('./config/redis');
 app.set('redis', redis);
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174'
+];
+
 app.use(cors({ 
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }, 
   credentials: true 
 }));
 app.use(cookieParser());

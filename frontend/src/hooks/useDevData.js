@@ -37,7 +37,9 @@ export function useDevData(showToast, userCredentials = null) {
         return data;
       } catch {
         showToast('Could not load GitHub data ..', 'error');
-        return null;
+        const fallback = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
+        setGithubData(fallback);
+        return fallback;
       }
     };
 
@@ -55,7 +57,17 @@ export function useDevData(showToast, userCredentials = null) {
         if (!res.ok) throw new Error('LeetCode fetch failed');
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        const formatted = { total: data.total || 0, easy: data.easy || 0, medium: data.medium || 0, hard: data.hard || 0, streak: 0 };
+        const formatted = { 
+          total: data.total || 0, 
+          easy: data.easy || 0, 
+          medium: data.medium || 0, 
+          hard: data.hard || 0, 
+          rating: data.rating,
+          top: data.top,
+          globalRank: data.globalRank,
+          highestRating: data.highestRating,
+          streak: 0 
+        };
         setCachedData(cacheKey, formatted);
         setLeetcodeData(formatted);
         showToast('LeetCode data loaded ✓');

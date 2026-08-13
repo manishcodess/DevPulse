@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Menu, Zap } from 'lucide-react';
+import { Menu, Zap, LogOut } from 'lucide-react';
 import { useDevData } from './hooks/useDevData';
 import { useChat } from './hooks/useChat';
 import { API_BASE_URL } from './config';
 import { useResume } from './hooks/useResume';
 import Toast from './components/layout/Toast';
 import LeftPanel from './components/layout/LeftPanel';
-import RightPanel from './components/layout/RightPanel';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import ChatInterface from './components/chat/ChatInterface';
 import ResumeReview from './components/resume/ResumeReview';
@@ -96,7 +95,7 @@ function AppContent() {
     inputRef,
     submitMessage,
     scrollToBottom
-  } = useChat(githubData, leetcodeData, userCredentials);
+  } = useChat(githubData, leetcodeData, userCredentials, dailyBrief, briefLoading);
 
   const {
     resumeAnalysis,
@@ -192,8 +191,13 @@ function AppContent() {
             <main className="main-content" style={{ position: 'relative' }}>
               <div className="app-container">
                 <div className="tabs-container">
-                  <Link to="/chat" className={`tab-btn ${location.pathname === '/chat' ? 'active' : ''}`}>💬 Coach Chat <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+K</span></Link>
-                  <Link to="/resume" className={`tab-btn ${location.pathname === '/resume' ? 'active' : ''}`}>📄 Resume Review <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+R</span></Link>
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <Link to="/chat" className={`tab-btn ${location.pathname === '/chat' ? 'active' : ''}`}>💬 Coach Chat <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+K</span></Link>
+                    <Link to="/resume" className={`tab-btn ${location.pathname === '/resume' ? 'active' : ''}`}>📄 Resume Review <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+R</span></Link>
+                  </div>
+                  <button onClick={handleLogout} className="logout-btn-attractive" style={{ marginLeft: 'auto' }}>
+                    <LogOut size={16} /> Log Out
+                  </button>
                 </div>
 
                 <Routes>
@@ -222,8 +226,6 @@ function AppContent() {
                 </Routes>
               </div>
             </main>
-            
-            <RightPanel dailyBrief={dailyBrief} briefLoading={briefLoading} />
           </div>
         } />
       </Routes>

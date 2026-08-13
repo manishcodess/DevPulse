@@ -12,6 +12,14 @@ const LEETCODE_QUERY = `
         }
       }
     }
+    userContestRanking(username: $username) {
+      rating
+      globalRanking
+      topPercentage
+    }
+    userContestRankingHistory(username: $username) {
+      rating
+    }
   }
 `;
 
@@ -52,12 +60,24 @@ router.post('/:username', async (req, res) => {
     }
 
     const stats = data.data.matchedUser.submitStats.acSubmissionNum;
+    const contest = data.data.userContestRanking;
+    const history = data.data.userContestRankingHistory;
+
+    let highestRating = null;
+    if (history && Array.isArray(history) && history.length > 0) {
+      const ratings = history.map(h => h.rating).filter(r => r > 0);
+      if (ratings.length > 0) highestRating = Math.round(Math.max(...ratings));
+    }
 
     const result = {
       total:  stats.find(s => s.difficulty === 'All')?.count    || 0,
       easy:   stats.find(s => s.difficulty === 'Easy')?.count   || 0,
       medium: stats.find(s => s.difficulty === 'Medium')?.count || 0,
       hard:   stats.find(s => s.difficulty === 'Hard')?.count   || 0,
+      rating: contest ? Math.round(contest.rating) : null,
+      top: contest ? contest.topPercentage : null,
+      globalRank: contest ? contest.globalRanking : null,
+      highestRating,
     };
 
     // 3. Save to Redis cache (1 hour) and send response

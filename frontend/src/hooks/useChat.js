@@ -1,16 +1,32 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { streamAIChat } from '../services/aiService';
 
-export function useChat(githubData, leetcodeData, userCredentials) {
+export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, briefLoading) {
   const firstName = userCredentials?.name?.split(' ')[0] || 'User';
 
   const [messages, setMessages] = useState([
     {
       role: 'ai',
-      content: `Hello, ${firstName}. I'm DevPulse, your Own AI developer coach. What are we working on today?`,
+      content: 'Analyzing your profiles...',
+      isLoading: true,
+      isDailyBrief: true,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
+
+  useEffect(() => {
+    setMessages(prev => {
+       if (dailyBrief) {
+          return prev.map((m, index) => {
+             if (index === 0 && m.isDailyBrief) {
+                return { ...m, content: dailyBrief, isLoading: false };
+             }
+             return m;
+          });
+       }
+       return prev;
+    });
+  }, [dailyBrief]);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
