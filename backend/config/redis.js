@@ -1,10 +1,19 @@
 const Redis = require('ioredis');
 
-// Initialize Redis client with fallback settings
-const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+let redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+
+// Redis Cloud requires TLS — use rediss:// scheme (double-s) for ioredis to handle TLS automatically
+const isRemote = !redisUrl.includes('127.0.0.1') && !redisUrl.includes('localhost');
+if (isRemote && redisUrl.startsWith('redis://')) {
+  redisUrl = redisUrl.replace('redis://', 'rediss://');
+}
+
+// Initialize Redis client
+const redis = new Redis(redisUrl, {
   lazyConnect: true,
   enableOfflineQueue: false,
   retryStrategy: (times) => (times > 3 ? null : times * 200),
+  tls: isRemote ? { rejectUnauthorized: false } : undefined,
 });
 
 redis.on('connect', () => console.log('✅ Connected to Redis'));

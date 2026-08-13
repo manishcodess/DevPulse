@@ -13,6 +13,8 @@ const leetcodeRoutes = require('./routes/leetcode');
 // ─── App Setup ────────────────────────────────────────────────────────────────
 
 const app = express();
+const { redis } = require('./config/redis');
+app.set('redis', redis);
 
 app.use(cors({ 
   origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
@@ -48,6 +50,7 @@ app.use('/api/auth',     authRoutes);
 app.use('/api/ai',       aiRoutes);
 app.use('/api/github',   githubRoutes);
 app.use('/api/leetcode', leetcodeRoutes);
+app.use('/api/cache', require('./routes/cache'));
 
 // ─── Fallback & Error Handlers (Always JSON) ─────────────────────────────────
 

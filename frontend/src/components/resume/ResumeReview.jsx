@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { parseResumeAnalysis } from '../../utils/resumeParser';
 
 const formatText = (text) => {
   if (!text) return text;
@@ -17,24 +18,15 @@ export default function ResumeReview({
   resumeLoading,
   resumeAnalysis
 }) {
-  const renderResumeAnalysis = (analysisText) => {
-    if (!analysisText) return null;
+  // Memoize the parsing logic so it only recalculates when resumeAnalysis changes
+  const parsedAnalysis = useMemo(() => {
+    return parseResumeAnalysis(resumeAnalysis);
+  }, [resumeAnalysis]);
+
+  const renderResumeAnalysis = () => {
+    if (!parsedAnalysis) return null;
     
-    const scoreMatch = analysisText.match(/SCORE:\s*(\d+)/i);
-    const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
-    const scoreColor = score > 7 ? '#22c55e' : score >= 5 ? '#f59e0b' : '#ef4444';
-
-    const strongMatch = analysisText.match(/STRONG POINTS[^\n]*\n([\s\S]*?)(?=WEAK POINTS)/i);
-    const strongPoints = strongMatch ? strongMatch[1].split('\n').filter(p => p.trim().startsWith('-')) : [];
-
-    const weakMatch = analysisText.match(/WEAK POINTS[^\n]*\n([\s\S]*?)(?=MISSING KEYWORDS)/i);
-    const weakPoints = weakMatch ? weakMatch[1].split('\n').filter(p => p.trim().startsWith('-')) : [];
-
-    const keywordMatch = analysisText.match(/MISSING KEYWORDS:?\s*([^\n]*)/i);
-    const keywords = keywordMatch ? keywordMatch[1].split(',').map(k => k.trim()).filter(Boolean) : [];
-
-    const verdictMatch = analysisText.match(/ONE LINE VERDICT:?\s*([^\n]*)/i);
-    const verdict = verdictMatch ? verdictMatch[1] : "";
+    const { score, scoreColor, strongPoints, weakPoints, keywords, verdict } = parsedAnalysis;
 
     return (
       <div className="resume-analysis-container">
@@ -46,19 +38,27 @@ export default function ResumeReview({
         <div className="resume-feedback-grid">
           <div className="feedback-card strong">
             <h3>Strong Points</h3>
-            <ul style={{ fontSize: '13.5px', lineHeight: 1.5 }}>{strongPoints.map((p,i)=><li key={i} style={{ marginBottom: '6px' }}>{formatText(p.replace('-','').trim())}</li>)}</ul>
+            <ul style={{ fontSize: '13.5px', lineHeight: 1.5 }}>
+              {strongPoints.map((p, i) => (
+                <li key={i} style={{ marginBottom: '6px' }}>{formatText(p.replace('-','').trim())}</li>
+              ))}
+            </ul>
           </div>
           <div className="feedback-card weak">
             <h3>Areas to Improve</h3>
-            <ul style={{ fontSize: '13.5px', lineHeight: 1.5 }}>{weakPoints.map((p,i)=><li key={i} style={{ marginBottom: '6px' }}>{formatText(p.replace('-','').trim())}</li>)}</ul>
+            <ul style={{ fontSize: '13.5px', lineHeight: 1.5 }}>
+              {weakPoints.map((p, i) => (
+                <li key={i} style={{ marginBottom: '6px' }}>{formatText(p.replace('-','').trim())}</li>
+              ))}
+            </ul>
           </div>
         </div>
 
         {keywords.length > 0 && (
           <div className="resume-keywords-section">
-            <h3>Missing Keywords</h3>
+            <h3>Suggested Missing Keywords</h3>
             <div className="keyword-pills">
-              {keywords.map((k,i)=><span key={i} className="pill pill-hard">{k}</span>)}
+              {keywords.map((k, i) => <span key={i} className="pill pill-hard">{k}</span>)}
             </div>
           </div>
         )}
@@ -97,7 +97,7 @@ export default function ResumeReview({
         </div>
       )}
 
-      {!resumeLoading && resumeAnalysis && renderResumeAnalysis(resumeAnalysis)}
+      {!resumeLoading && parsedAnalysis && renderResumeAnalysis()}
     </div>
   );
 }

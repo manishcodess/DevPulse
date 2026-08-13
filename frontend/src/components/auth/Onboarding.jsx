@@ -122,7 +122,7 @@ export default function Onboarding({ onComplete, onSkip }) {
             <input 
               type="text" 
               name="github"
-              placeholder="GitHub Username (e.g. octocat)" 
+              placeholder="GitHub Username (e.g. manishcodess)" 
               className="auth-input"
               value={formData.github}
               onChange={handleChange}
@@ -135,7 +135,7 @@ export default function Onboarding({ onComplete, onSkip }) {
             <input 
               type="text" 
               name="leetcode"
-              placeholder="LeetCode Username (e.g. leetcode_user)" 
+              placeholder="LeetCode Username (e.g. manishsharmacodes)" 
               className="auth-input"
               value={formData.leetcode}
               onChange={handleChange}

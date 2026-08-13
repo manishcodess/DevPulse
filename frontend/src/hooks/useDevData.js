@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { generateAIContent } from '../services/aiService';
 import { getCachedData, setCachedData } from '../utils/storage';
 import { API_BASE_URL } from '../config';
+import { generateDailyBriefPrompt } from '../utils/promptGenerator';
 
 // useDevData fetches GitHub and LeetCode stats for the logged-in user,
 // then uses that data to generate a personalized AI daily brief.
@@ -67,46 +68,14 @@ export function useDevData(showToast, userCredentials = null) {
 
     const generateDailyBrief = async (ghData, lcData) => {
       const firstName = userCredentials?.name?.split(' ')[0] || 'Developer';
-      const prompt = `You are DevPulse, an AI developer mentor.
-
-Generate a Daily Brief for ${firstName} using ONLY this real data:
-- GitHub commits today: ${ghData?.todayCommits || 0}
-- GitHub commits yesterday: ${ghData?.yesterdayCommits || 0}  
-- Total GitHub commits: ${ghData?.totalCommits || 0}
-- Current GitHub streak: ${ghData?.streak || 0} days
-
-=leetocde easy problems solved ${lcdata?.easydata};
-=leetocdemedium problems solved ${lcdata?.mediumdata};
-=leetocde hard problems solved ${lcdata?.harddata};
-- LeetCode problems solved: ${lcData?.total || 0}
-- every leetocde rating ifo ${lcdata?.rating|| 0}
-- every leetcode consistency ${lcdata?.consistency||0}
-
-Include the following observations:(id any) no need to mention if not
-- Your questions today were good and frequently asked topics.
-- Strong consistency in solving Medium problems.
-- Contest rating improved 18% in the last 6 months.
-- Most active language: C++.,javascript
-- your github/leetcode nomber of commits / questions are this much is okay/medium/enough quantity
-- Recommend attempting 2 Hard problems this week for interview readiness.
-- the level of questions youa re doing is enough for you to achieve x-y range of pckage
-Rules:
-- seee analyse the last 5 leetocde questiosn and mention little which were most imp(1-2 ) and tell  if all areimp and also teell  whicha re  not asked too much
-- Start by greeting ${firstName} by name
-- Mention one positive thing first, even if progress is small
-- Comment on today's vs yesterday's activity honestly
-- If on a streak, celebrate it; if no activity today, acknowledge it without guilt
-- End with ONE motivating sentence
-- Maximum 100-150 words — NO bullet points, write like a mentor
-( you have to sound liek a big bro in the software industry )
-Never sound robotic. Write specifically for this developer.`;
+      const prompt = generateDailyBriefPrompt(firstName, ghData, lcData);
 
       try {
         const text = await generateAIContent(prompt);
         setDailyBrief(text);
         showToast('Daily brief ready !');
       } catch {
-        setDailyBrief("Ready to level up today? ${firstname} Let's focus on consistent progress.");
+        setDailyBrief(`Ready to level up today, ${firstName}? Let's focus on consistent progress.`);
       } finally {
         setBriefLoading(false);
       }
