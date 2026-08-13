@@ -47,17 +47,15 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
 
       // Save to DB for context injection
       if (userCredentials) {
-        const token = localStorage.getItem('devpulse_token');
-        if (token) {
-          try {
-            const res = await fetch(`${API_BASE_URL}/auth/resume`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ resumeContext: analysisText })
-            });
+        try {
+          const res = await fetch(`${API_BASE_URL}/auth/resume`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ resumeContext: analysisText })
+          });
             const data = await res.json();
             if (data.success) {
               setUserCredentials(data.user);
@@ -65,7 +63,6 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
           } catch (err) {
             console.error("Failed to save resume context", err);
           }
-        }
       }
 
     } catch {

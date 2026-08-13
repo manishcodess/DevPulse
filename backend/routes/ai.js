@@ -9,7 +9,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const AI_MODEL = 'gemini-3.1-flash-lite';
 
 // ─── POST /api/ai/generate (One-shot) ─────────────────────────────────────────
-router.post('/generate', async (req, res) => {
+router.post('/generate', verifyToken, async (req, res) => {
   try {
     const { contents } = req.body;
     if (!contents) return res.status(400).json({ error: "Missing 'contents'" });

@@ -65,13 +65,12 @@ export default function Onboarding({ onComplete, onSkip }) {
       }
 
       setLoadingText("Finalizing setup...");
-      const token = localStorage.getItem('devpulse_token');
       const response = await fetch(`${API_BASE_URL}/auth/onboard`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           githubUsername: formData.github,
           leetcodeUsername: formData.leetcode,

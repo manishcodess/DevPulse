@@ -8,6 +8,7 @@ export async function generateAIContent(contents) {
   const response = await fetch(`${API_BASE_URL}/ai/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ contents }),
   });
 
@@ -30,6 +31,7 @@ export async function streamAIChat(userMessage) {
   const response = await fetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     // Only sending the user contents; the backend will generate the system instructions securely
     body: JSON.stringify({
       contents: userMessage,
