@@ -12,12 +12,12 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
     setResumeLoading(true);
     setResumeAnalysis("");
     try {
-      const promptText = `You are a senior tech recruiter at a top product company.
-      Analyze this resume for a Software Engineering role. Analyze the full profile including education, experience, and projects.
+      const promptText = `You are a Senior Technical Recruiter and Hiring Manager at a top-tier tech company.
+      Review the provided Software Engineering resume comprehensively, focusing on education, experience, impact, and projects.
       
       ${text ? text.slice(0, 3000) : 'See attached PDF.'}
       
-      Give feedback in exactly this format:
+      Provide your objective evaluation in EXACTLY the following format:
       SCORE: X/10
       
       STRONG POINTS (3 bullet points):
@@ -25,10 +25,11 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
       
       WEAK POINTS (3 bullet points):
       - 
-      MISSING KEYWORDS (comma separated, max 8):if have that only otherise dont mention in response
+      
+      MISSING KEYWORDS (comma separated, max 8 - only include highly relevant industry keywords that are missing):
       
       ONE LINE VERDICT:
-      be good and answer like its your younger bro and suggeste things that are achievable and doable`;
+      [Provide a single, highly actionable, professional sentence on what the candidate must do to improve their chances of passing an ATS and recruiter screen.]`;
       
       const parts = [{ text: promptText }];
       if (pdfBase64) {

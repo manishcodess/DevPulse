@@ -30,17 +30,24 @@ export default function Onboarding({ onComplete, onSkip }) {
     try {
       if (resumeFile) {
         setLoadingText("Analyzing resume via AI...");
-        const promptText = `You are a senior tech recruiter at a top product company.
-      Analyze this resume for a Software Engineering role. Analyze the full profile including education, experience, and projects.
+        const promptText = `You are a Senior Technical Recruiter and Hiring Manager at a top-tier tech company.
+      Review the provided Software Engineering resume comprehensively, focusing on education, experience, impact, and projects.
       
       ${resumeFile.type !== "application/pdf" ? (await readFileAsText(resumeFile)).slice(0, 3000) : 'See attached PDF.'}
       
-      Give feedback in exactly this format:
+      Provide your objective evaluation in EXACTLY the following format:
       SCORE: X/10
-      so behav like a senior software develper having 10 yoe and u got a resume of a fresher so tell only 10 things to improve geniunly so 
-      that will help to increase the ats not everything if its needed other wise no needed and tell stron gpoints in the paragrah
       
-      `;
+      STRONG POINTS (3 bullet points):
+      - 
+      
+      WEAK POINTS (3 bullet points):
+      - 
+      
+      MISSING KEYWORDS (comma separated, max 8 - only include highly relevant industry keywords that are missing):
+      
+      ONE LINE VERDICT:
+      [Provide a single, highly actionable, professional sentence on what the candidate must do to improve their chances of passing an ATS and recruiter screen.]`;
         
         const parts = [{ text: promptText }];
         if (resumeFile.type === "application/pdf") {
