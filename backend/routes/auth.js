@@ -6,21 +6,9 @@ const User = require('../models/User');
 
 const router = express.Router();
 
-// ─── JWT Secret ───────────────────────────────────────────────────────────────
-// In production, JWT_SECRET MUST be set via environment variable.
-// In development, we fall back to a hardcoded string so you don't need to set it locally.
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  (process.env.NODE_ENV === 'production' ? null : 'devpulse_dev_secret');
-
-if (!JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET is not set in production. Exiting.');
-  process.exit(1);
-}
+const { verifyToken, JWT_SECRET } = require('../middleware/authMiddleware');
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
-// Formats a Mongoose User document into the shape the frontend expects.
-// Defined once here so we don't repeat the same object literal 5 times.
 const formatUser = (user) => ({
   id: user._id,
   name: user.name,
@@ -38,24 +26,6 @@ const COOKIE_OPTIONS = {
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
-// ─── Middleware ───────────────────────────────────────────────────────────────
-// verifyToken runs BEFORE any protected route handler.
-// It checks cookies first, then falls back to Authorization header.
-const verifyToken = (req, res, next) => {
-  let token = req.cookies?.devpulse_token;
-  if (!token) {
-    const authHeader = req.headers['authorization'];
-    if (authHeader) token = authHeader.split(' ')[1];
-  }
-
-  if (!token) return res.status(403).json({ error: 'No token provided' });
-
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ error: 'Invalid or expired token' });
-    req.userId = decoded.id; // Attach the user ID so route handlers can use it
-    next();
-  });
-};
 
 // ─── POST /api/auth/signup ────────────────────────────────────────────────────
 // Creates a new user account and sets HttpOnly cookie.

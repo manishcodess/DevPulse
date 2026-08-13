@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { streamAIChat, buildSystemPrompt } from '../services/aiService';
+import { streamAIChat } from '../services/aiService';
 
 export function useChat(githubData, leetcodeData, userCredentials) {
   const firstName = userCredentials?.name?.split(' ')[0] || 'User';
@@ -34,11 +34,9 @@ export function useChat(githubData, leetcodeData, userCredentials) {
     setIsLoading(true);
 
     try {
-      // 2. Build system instruction
-      const systemInstruction = buildSystemPrompt(githubData, leetcodeData, userCredentials);
-
-      // 3. Request streaming response from backend
-      const response = await streamAIChat(userMessage, systemInstruction);
+      // 2. Request streaming response from backend
+      // Backend now handles system instructions securely using user context
+      const response = await streamAIChat(userMessage);
 
       // 4. Get stream reader and text decoder
       const reader = response.getReader();

@@ -1,5 +1,7 @@
 const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
+const { verifyToken } = require('../middleware/authMiddleware');
+const { buildSystemPrompt } = require('../services/aiPromptService');
 
 const router = express.Router();
 
@@ -25,14 +27,16 @@ router.post('/generate', async (req, res) => {
 
 // ─── POST /api/ai/chat (Super Simple Text Streaming) ─────────────────────────
 // Streams text chunks directly as Gemini generates them
-router.post('/chat', async (req, res) => {
-  const { contents, systemInstruction } = req.body;
+router.post('/chat', verifyToken, async (req, res) => {
+  const { contents } = req.body;
   if (!contents) return res.status(400).json({ error: "Missing 'contents'" });
 
   // Set header to plain text streaming
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
   try {
+    const systemInstruction = await buildSystemPrompt(req.userId);
+
     const stream = await ai.models.generateContentStream({
       model: AI_MODEL,
       contents,
