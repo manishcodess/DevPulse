@@ -95,42 +95,41 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
 
       {/* Connection prompts */}
       {(!githubData || !leetcodeData) && (
-        <div style={{ marginTop: '12px', padding: '12px', background: 'var(--surface-1)', borderRadius: '8px' }}>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '8px' }}>
-            Connect your LeetCode and GitHub for a seamless AI coach experience.
+        <div style={{ marginTop: '16px', padding: '16px', background: 'var(--surface-1)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+          <p style={{ color: 'var(--text-primary)', marginBottom: '12px', fontSize: '13px', fontWeight: '500' }}>
+            Link your accounts for a seamless AI coach experience
           </p>
           {!githubData && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
               <input
                 placeholder="GitHub Username"
                 value={githubInput}
                 onChange={(e) => setGithubInput(e.target.value)}
-                style={{ flex: '1', padding: '6px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: '13px' }}
               />
               <button
                 onClick={() => { setGithubConnecting(true); connectService('github').finally(() => setGithubConnecting(false)); }}
                 disabled={!githubInput || githubConnecting}
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #2ea043, #238636)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
               >
-                Activate
+                {githubConnecting ? 'Connecting...' : 'Connect GitHub'}
               </button>
             </div>
           )}
           {!leetcodeData && (
-            <div style={{ display: 'flex', gap: '8px' }}
-              >
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <input
                 placeholder="LeetCode Username"
                 value={leetcodeInput}
                 onChange={(e) => setLeetcodeInput(e.target.value)}
-                style={{ flex: '1', padding: '6px 8px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--surface-2)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: '13px' }}
               />
               <button
                 onClick={() => { setLeetcodeConnecting(true); connectService('leetcode').finally(() => setLeetcodeConnecting(false)); }}
                 disabled={!leetcodeInput || leetcodeConnecting}
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer' }}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
               >
-                Activate
+                {leetcodeConnecting ? 'Connecting...' : 'Connect LeetCode'}
               </button>
             </div>
           )}
@@ -153,11 +152,11 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
               <div className="dev-stats-grid">
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Commits</span>
-                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'green' }}>{githubData.totalCommits}</span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>{githubData.totalCommits}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Repositories</span>
-                  <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{githubData.publicRepos}</span>
+                  <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{githubData.publicRepos}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Current Streak</span>
@@ -185,35 +184,66 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
           </div>
           
           {/* LeetCode Detailed Summary */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
             {/* Total Solved */}
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--primary)' }}>
-              {leetcodeData?.total ?? 0} Problems Solved
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '28px', fontWeight: '800', color: 'var(--accent-orange)', letterSpacing: '-1px' }}>
+                {leetcodeData?.total ?? 0}
+              </span>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Problems Solved</span>
             </div>
+            
             {/* Difficulty Graph */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                Easy {" ".repeat(10 - Math.min(leetcodeData?.easy ?? 0, 10))}█{"█".repeat(Math.min(leetcodeData?.easy ?? 0, 10))} {leetcodeData?.easy ?? 0}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                <span style={{ color: '#10b981', fontWeight: '500' }}>Easy</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.easy ?? 0}</span>
               </div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                Medium {" ".repeat(10 - Math.min(leetcodeData?.medium ?? 0, 10))}█{"█".repeat(Math.min(leetcodeData?.medium ?? 0, 10))} {leetcodeData?.medium ?? 0}
+              <div style={{ width: '100%', height: '4px', background: 'var(--surface-2)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(((leetcodeData?.easy ?? 0) / (leetcodeData?.total || 1)) * 100, 100)}%`, height: '100%', background: '#10b981' }}></div>
               </div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                Hard {" ".repeat(10 - Math.min(leetcodeData?.hard ?? 0, 10))}█{"█".repeat(Math.min(leetcodeData?.hard ?? 0, 10))} {leetcodeData?.hard ?? 0}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginTop: '4px' }}>
+                <span style={{ color: '#f59e0b', fontWeight: '500' }}>Medium</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.medium ?? 0}</span>
+              </div>
+              <div style={{ width: '100%', height: '4px', background: 'var(--surface-2)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(((leetcodeData?.medium ?? 0) / (leetcodeData?.total || 1)) * 100, 100)}%`, height: '100%', background: '#f59e0b' }}></div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginTop: '4px' }}>
+                <span style={{ color: '#ef4444', fontWeight: '500' }}>Hard</span>
+                <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.hard ?? 0}</span>
+              </div>
+              <div style={{ width: '100%', height: '4px', background: 'var(--surface-2)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(((leetcodeData?.hard ?? 0) / (leetcodeData?.total || 1)) * 100, 100)}%`, height: '100%', background: '#ef4444' }}></div>
               </div>
             </div>
+
             {/* Contest Rating */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>
-              <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>🏅 Contest Rating</div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Rating {leetcodeData?.rating ?? '--'}</div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Top {leetcodeData?.top ?? '--'}%</div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Global Rank {leetcodeData?.globalRank ?? '--'}</div>
-              <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Highest Rating {leetcodeData?.highestRating ?? '--'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Rating</span>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData?.rating ?? '--'}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Top</span>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData?.top ?? '--'}%</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Global Rank</span>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData?.globalRank ?? '--'}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Highest</span>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData?.highestRating ?? '--'}</span>
+              </div>
             </div>
+
             {/* View Profile Link */}
             <a href={leetcodeData?.profileUrl || `https://leetcode.com/${leetcodeData?.username || ''}`} target="_blank" rel="noreferrer"
-               style={{ marginTop: '6px', color: 'var(--primary)', textDecoration: 'underline', fontSize: '14px' }}>
-              View Profile
+               style={{ marginTop: '8px', color: 'var(--accent-orange)', textDecoration: 'none', fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              View LeetCode Profile <ExternalLink size={12} />
             </a>
           </div>
         </div>

@@ -215,9 +215,10 @@ body {
 
 /* User Message */
 .message.user {
-  background: var(--surface-1);
-  color: var(--text-primary);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
   border: none;
+  border-bottom-right-radius: 4px;
 }
 
 .message-label {
@@ -244,19 +245,19 @@ body {
   background-color: var(--surface-1);
   color: var(--text-primary);
   border: 1px solid var(--border-subtle);
-  padding: 0.8rem 1.25rem;
-  line-height: 1.7;
+  border-bottom-left-radius: 4px;
 }
 
 /* Typography inside messages */
 .message-content {
-  font-size: 1rem;
+  font-size: 0.95rem;
   white-space: pre-wrap;
   word-wrap: break-word;
+  line-height: 1.5;
 }
 
 .message-content p {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 .message-content p:last-child {
   margin-bottom: 0;
