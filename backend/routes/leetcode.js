@@ -20,6 +20,11 @@ const LEETCODE_QUERY = `
     userContestRankingHistory(username: $username) {
       rating
     }
+    recentAcSubmissionList(username: $username, limit: 5) {
+      title
+      titleSlug
+      timestamp
+    }
   }
 `;
 
@@ -78,6 +83,7 @@ router.post('/:username', async (req, res) => {
       top: contest ? contest.topPercentage : null,
       globalRank: contest ? contest.globalRanking : null,
       highestRating,
+      recentSubmissions: data.data.recentAcSubmissionList || [],
     };
 
     // 3. Save to Redis cache (1 hour) and send response

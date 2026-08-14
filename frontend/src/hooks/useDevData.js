@@ -22,10 +22,8 @@ export function useDevData(showToast, userCredentials = null) {
       const username = userCredentials?.github;
       if (!username) return null;
 
-      // Check localStorage cache first (15-minute TTL) to avoid redundant API calls
       const cacheKey = `devpulse-github-${username}`;
-      const cached = getCachedData(cacheKey, 15);
-      if (cached) { setGithubData(cached); return cached; }
+      // Cache disabled temporarily to force fresh data
 
       try {
         const res = await fetch(`${API_BASE_URL}/github/${username}/stats`);
@@ -48,8 +46,7 @@ export function useDevData(showToast, userCredentials = null) {
       if (!username) return null;
 
       const cacheKey = `devpulse-leetcode-${username}`;
-      const cached = getCachedData(cacheKey, 15);
-      if (cached) { setLeetcodeData(cached); return cached; }
+      // Cache disabled temporarily to force fresh data
 
       try {
         // LeetCode route is POST because the backend calls LeetCode's GraphQL API
@@ -66,6 +63,7 @@ export function useDevData(showToast, userCredentials = null) {
           top: data.top,
           globalRank: data.globalRank,
           highestRating: data.highestRating,
+          recentSubmissions: data.recentSubmissions || [],
           streak: 0 
         };
         setCachedData(cacheKey, formatted);
@@ -74,7 +72,9 @@ export function useDevData(showToast, userCredentials = null) {
         return formatted;
       } catch {
         showToast('Could not load LeetCode data', 'error');
-        return null;
+        const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
+        setLeetcodeData(fallback);
+        return fallback;
       }
     };
 

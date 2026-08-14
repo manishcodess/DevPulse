@@ -145,13 +145,13 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
                       <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{githubData.publicRepos}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Current Streak</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total Active Days</span>
                       <span style={{ 
-                        fontSize: Number(githubData.streak) > 0 ? '16px' : '13px', 
-                        fontWeight: Number(githubData.streak) > 0 ? 'bold' : 'normal',
-                        color: Number(githubData.streak) > 0 ? 'inherit' : 'var(--text-muted)'
+                        fontSize: Number(githubData.activeDays) > 0 ? '16px' : '13px', 
+                        fontWeight: Number(githubData.activeDays) > 0 ? 'bold' : 'normal',
+                        color: Number(githubData.activeDays) > 0 ? '#10b981' : 'var(--text-muted)'
                       }}>
-                        {Number(githubData.streak) > 0 ? `🔥 ${githubData.streak}` : "Start your streak today!"}
+                        {Number(githubData.activeDays) > 0 ? `🔥 ${githubData.activeDays}` : "Start your activity today!"}
                       </span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
