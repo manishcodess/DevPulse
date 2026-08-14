@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchDailyBrief } from '../services/aiService';
 import { getCachedData, setCachedData } from '../utils/storage';
 import { API_BASE_URL } from '../config';
+import { apiFetch } from '../utils/api';
 
 // useDevData fetches GitHub and LeetCode stats for the logged-in user,
 // then uses that data to generate a personalized AI daily brief.
@@ -40,8 +41,7 @@ export function useDevData(showToast, userCredentials = null) {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/github/${username}/stats`, { credentials: 'include' });
-        if (!res.ok) throw new Error('GitHub fetch failed');
+        const res = await apiFetch(`${API_BASE_URL}/github/${username}/stats`, { credentials: 'include' });
         const data = await res.json();
         if (!ignore) {
           setCachedData(cacheKey, data);
@@ -49,9 +49,9 @@ export function useDevData(showToast, userCredentials = null) {
           showToast('GitHub data loaded !');
         }
         return data;
-      } catch {
+      } catch (err) {
         if (!ignore) {
-          showToast('Could not load GitHub data ..', 'error');
+          showToast(`Could not load GitHub data: ${err.message}`, 'error');
           const fallback = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
           setGithubData(fallback);
           return fallback;
@@ -74,8 +74,7 @@ export function useDevData(showToast, userCredentials = null) {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST', credentials: 'include' });
-        if (!res.ok) throw new Error('LeetCode fetch failed');
+        const res = await apiFetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST', credentials: 'include' });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         const formatted = { 
@@ -96,9 +95,9 @@ export function useDevData(showToast, userCredentials = null) {
           showToast('LeetCode data loaded ✓');
         }
         return formatted;
-      } catch {
+      } catch (err) {
         if (!ignore) {
-          showToast('Could not load LeetCode data', 'error');
+          showToast(`Could not load LeetCode data: ${err.message}`, 'error');
           const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
           setLeetcodeData(fallback);
           return fallback;

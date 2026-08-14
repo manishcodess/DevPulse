@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Zap, ExternalLink, Menu, Edit2, Code } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import { extractUsername } from '../../utils/username';
+import { apiFetch } from '../../utils/api';
 
 export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout, setUserCredentials }) {
   const [githubInput, setGithubInput] = useState('');
@@ -16,7 +17,7 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
     if (type === 'github') body.githubUsername = extractUsername(githubInput);
     else if (type === 'leetcode') body.leetcodeUsername = extractUsername(leetcodeInput);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/onboard`, {
+      const res = await apiFetch(`${API_BASE_URL}/auth/onboard`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -25,7 +26,6 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to connect');
       // Update user credentials with new data
       setUserCredentials(prev => ({ ...prev, ...data.user }));
       if (type === 'github') setEditingGithub(false);

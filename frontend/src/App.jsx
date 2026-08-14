@@ -3,6 +3,7 @@ import { Menu, Zap, LogOut } from 'lucide-react';
 import { useDevData } from './hooks/useDevData';
 import { useChat } from './hooks/useChat';
 import { API_BASE_URL } from './config';
+import { apiFetch } from './utils/api';
 import { useResume } from './hooks/useResume';
 import Toast from './components/layout/Toast';
 import LeftPanel from './components/layout/LeftPanel';
@@ -31,7 +32,7 @@ function AppContent() {
   // ─── Cookie‑based auth check ───────────────────────────────────────
   useEffect(() => {
     // No token needed; the auth cookie (HttpOnly) is sent automatically
-    fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
+    apiFetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.user) {
@@ -70,7 +71,7 @@ function AppContent() {
   };
   // Logout handler that clears HttpOnly cookie via backend
   const handleLogout = () => {
-    fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
+    apiFetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
       .then(() => {
         setIsAuthenticated(false);
         setUserCredentials(null);

@@ -5,6 +5,7 @@ import { readFileAsBase64, readFileAsText } from '../../utils/file';
 import { extractUsername } from '../../utils/username';
 import { buildResumePrompt } from '../../utils/prompts';
 import { API_BASE_URL } from '../../config';
+import { apiFetch } from '../../utils/api';
 
 export default function Onboarding({ onComplete, onSkip }) {
   const [formData, setFormData] = useState({
@@ -53,7 +54,7 @@ export default function Onboarding({ onComplete, onSkip }) {
       }
 
       setLoadingText("Finalizing setup...");
-      const response = await fetch(`${API_BASE_URL}/auth/onboard`, {
+      const response = await apiFetch(`${API_BASE_URL}/auth/onboard`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -67,16 +68,7 @@ export default function Onboarding({ onComplete, onSkip }) {
         })
       });
 
-      const contentType = response.headers.get('content-type');
-      let data = {};
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        throw new Error(`Server returned error (${response.status}): ${text.slice(0, 100)}`);
-      }
-
-      if (!response.ok) throw new Error(data.error || 'Failed to update profiles');
+      const data = await response.json();
 
       onComplete(data.user);
     } catch (err) {

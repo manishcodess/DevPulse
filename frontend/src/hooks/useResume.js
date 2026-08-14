@@ -3,6 +3,7 @@ import { generateAIContent } from '../services/aiService';
 import { readFileAsBase64, readFileAsText } from '../utils/file';
 import { buildResumePrompt } from '../utils/prompts';
 import { API_BASE_URL } from '../config';
+import { apiFetch } from '../utils/api';
 
 export function useResume(showToast, userCredentials, setUserCredentials) {
   const [resumeAnalysis, setResumeAnalysis] = useState("");
@@ -32,7 +33,7 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
       // Save to DB for context injection
       if (userCredentials) {
         try {
-          const res = await fetch(`${API_BASE_URL}/auth/resume`, {
+          const res = await apiFetch(`${API_BASE_URL}/auth/resume`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -40,18 +41,18 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
             credentials: 'include',
             body: JSON.stringify({ resumeContext: analysisText })
           });
-            const data = await res.json();
-            if (data.success) {
-              setUserCredentials(data.user);
-            }
-          } catch (err) {
-            console.error("Failed to save resume context", err);
+          const data = await res.json();
+          if (data.success) {
+            setUserCredentials(data.user);
           }
+        } catch (err) {
+          console.error("Failed to save resume context", err.message);
+        }
       }
 
-    } catch {
+    } catch (err) {
       setResumeAnalysis("SCORE: 0/10\n\nONE LINE VERDICT: Failed to analyze resume.");
-      showToast("Failed to analyze resume", "error");
+      showToast(`Failed to analyze resume: ${err.message}`, "error");
     } finally {
       setResumeLoading(false);
     }

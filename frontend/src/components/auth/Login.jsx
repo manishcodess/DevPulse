@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Zap, Mail, Lock, ArrowRight } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
+import { apiFetch } from '../../utils/api';
 
 export default function Login({ onLogin, onSwitchToSignup }) {
   const [formData, setFormData] = useState({
@@ -20,7 +21,7 @@ export default function Login({ onLogin, onSwitchToSignup }) {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await apiFetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -28,7 +29,6 @@ export default function Login({ onLogin, onSwitchToSignup }) {
       });
       
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Login failed');
       
       onLogin(data.user);
     } catch (err) {
