@@ -1,5 +1,6 @@
 const express = require('express');
 const { getCache, setCache } = require('../config/redis');
+const { verifyToken } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 const LEETCODE_QUERY = `
@@ -30,16 +31,16 @@ const LEETCODE_QUERY = `
 
 // POST /api/leetcode/:username
 // Fetches LeetCode statistics with 1-hour Redis caching
-router.post('/:username', async (req, res) => {
+router.post('/:username', verifyToken, async (req, res) => {
   try {
     const { username } = req.params;
     const cacheKey = `cache:leetcode:${username}`;
 
-    // 1. Check Redis cache first (DISABLED FOR TESTING)
-    // const cachedData = await getCache(cacheKey);
-    // if (cachedData) {
-    //   return res.json(cachedData);
-    // }
+    // 1. Check Redis cache first
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
     // 2. Fetch fresh data from LeetCode GraphQL API
     const response = await fetch('https://leetcode.com/graphql', {

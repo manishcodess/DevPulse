@@ -1,20 +1,21 @@
 const express = require('express');
 const { getCache, setCache } = require('../config/redis');
 const { getGithubStats } = require('../services/githubService');
+const { verifyToken } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // GET /api/github/:username/stats
 // Fetches public GitHub profile stats for a given username (with 1-hour Redis caching)
-router.get('/:username/stats', async (req, res) => {
+router.get('/:username/stats', verifyToken, async (req, res) => {
   try {
     const { username } = req.params;
     const cacheKey = `cache:github:${username}`;
 
-    // 1. Check Redis cache first (DISABLED FOR TESTING)
-    // const cachedData = await getCache(cacheKey);
-    // if (cachedData) {
-    //   return res.json(cachedData);
-    // }
+    // 1. Check Redis cache first
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
 
     // 2. Fetch fresh data using the Service Layer
     const result = await getGithubStats(username);

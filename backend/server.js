@@ -16,18 +16,15 @@ const app = express();
 const { redis } = require('./config/redis');
 app.set('redis', redis);
 
-// Removed allowedOrigins array
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 app.use(cors({ 
-  origin: function (origin, callback) {
-    // Allow all origins for local development
-    callback(null, true);
-  }, 
+  origin: ALLOWED_ORIGIN, 
   credentials: true 
 }));
 app.use(cookieParser());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 // ─── MongoDB Connection ───────────────────────────────────────────────────────
 
@@ -55,7 +52,6 @@ app.use('/api/auth',     authRoutes);
 app.use('/api/ai',       aiRoutes);
 app.use('/api/github',   githubRoutes);
 app.use('/api/leetcode', leetcodeRoutes);
-app.use('/api/cache', require('./routes/cache'));
 
 // ─── Fallback & Error Handlers (Always JSON) ─────────────────────────────────
 

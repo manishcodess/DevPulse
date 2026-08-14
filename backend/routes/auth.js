@@ -131,7 +131,8 @@ router.post('/onboard', verifyToken, async (req, res) => {
           'Referer': 'https://leetcode.com/',
         },
         body: JSON.stringify({
-          query: `query { matchedUser(username: "${leetcodeUsername}") { username } }`,
+          query: `query($username: String!) { matchedUser(username: $username) { username } }`,
+          variables: { username: leetcodeUsername },
         }),
       });
       const lcText = await lcRes.text();

@@ -1,3 +1,5 @@
+const cheerio = require('cheerio');
+
 const getGithubHeaders = () => {
   const headers = {};
   if (process.env.GITHUB_TOKEN) {
@@ -67,7 +69,6 @@ const fetchTopLanguages = async (username, publicRepos) => {
   return Array.from(languages);
 };
 
-const cheerio = require('cheerio');
 
 const fetchTotalStatsFromProfile = async (username, fallbackCommits, fallbackActiveDays) => {
   try {
@@ -107,11 +108,13 @@ const fetchTotalStatsFromProfile = async (username, fallbackCommits, fallbackAct
 };
 
 const getGithubStats = async (username) => {
-  // 1. Fetch Profile
-  const profile = await fetchUserProfile(username);
+  // 1. Fetch Profile & Events in parallel
+  const [profile, events] = await Promise.all([
+    fetchUserProfile(username),
+    fetchUserEvents(username)
+  ]);
   
-  // 2. Fetch Events & Calculate Fallback Stats
-  const events = await fetchUserEvents(username);
+  // 2. Calculate Fallback Stats from Events
   const { todayCommits, yesterdayCommits, activeDays: fallbackActiveDays, totalCommitsFromEvents } = calculateCommitStats(events);
   
   // 3. Fetch Languages & Scrape Total Stats in Parallel
