@@ -30,9 +30,17 @@ export function useDevData(showToast, userCredentials = null) {
       if (!username) return null;
 
       const cacheKey = `devpulse-github-${username}`;
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        if (!ignore) {
+          setGithubData(cached);
+          showToast('GitHub data loaded from cache ✓');
+        }
+        return cached;
+      }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/github/${username}/stats`);
+        const res = await fetch(`${API_BASE_URL}/github/${username}/stats`, { credentials: 'include' });
         if (!res.ok) throw new Error('GitHub fetch failed');
         const data = await res.json();
         if (!ignore) {
@@ -56,9 +64,17 @@ export function useDevData(showToast, userCredentials = null) {
       if (!username) return null;
 
       const cacheKey = `devpulse-leetcode-${username}`;
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        if (!ignore) {
+          setLeetcodeData(cached);
+          showToast('LeetCode data loaded from cache ✓');
+        }
+        return cached;
+      }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST' });
+        const res = await fetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST', credentials: 'include' });
         if (!res.ok) throw new Error('LeetCode fetch failed');
         const data = await res.json();
         if (data.error) throw new Error(data.error);

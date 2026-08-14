@@ -36,17 +36,16 @@ export async function fetchDailyBrief() {
 }
 
 // ─── streamAIChat ─────────────────────────────────────────────────────────────
-// Opens a streaming connection to the backend using Server-Sent Events (SSE).
+// Opens a streaming connection to the backend for chat messages.
 // Returns the raw response.body (a ReadableStream) for the caller to process.
-// Used for: Chat messages
-export async function streamAIChat(userMessage) {
+// Sends full conversation history so the AI maintains context across messages.
+export async function streamAIChat(messageHistory) {
   const response = await fetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    // Only sending the user contents; the backend will generate the system instructions securely
     body: JSON.stringify({
-      contents: userMessage,
+      contents: messageHistory,
     }),
   });
   if (!response.ok) throw new Error('Chat stream failed to connect');

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Code2, User, ArrowRight, Save, MessageSquare, FileText } from 'lucide-react';
 import { generateAIContent } from '../../services/aiService';
 import { readFileAsBase64, readFileAsText } from '../../utils/file';
+import { extractUsername } from '../../utils/username';
+import { buildResumePrompt } from '../../utils/prompts';
 import { API_BASE_URL } from '../../config';
 
 export default function Onboarding({ onComplete, onSkip }) {
@@ -14,29 +16,6 @@ export default function Onboarding({ onComplete, onSkip }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [error, setError] = useState(null);
-
-  const extractUsername = (input) => {
-    if (!input) return '';
-    let val = input.trim();
-    try {
-      const url = new URL(val);
-      const pathParts = url.pathname.split('/').filter(Boolean);
-      if (url.hostname.includes('leetcode.com')) {
-         if (pathParts[0] === 'u') return pathParts[1];
-         return pathParts[0];
-      }
-      if (url.hostname.includes('github.com')) {
-         return pathParts[0];
-      }
-    } catch {
-      // Not a valid URL, fallback to parsing it as a string
-    }
-    
-    val = val.split('?')[0].split('#')[0];
-    if (val.endsWith('/')) val = val.slice(0, -1);
-    const parts = val.split('/');
-    return parts[parts.length - 1];
-  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -53,24 +32,10 @@ export default function Onboarding({ onComplete, onSkip }) {
     try {
       if (resumeFile) {
         setLoadingText("Analyzing resume via AI...");
-        const promptText = `You are a Senior Technical Recruiter and Hiring Manager at a top-tier tech company.
-      Review the provided Software Engineering resume comprehensively, focusing on education, experience, impact, and projects.
-      
-      ${resumeFile.type !== "application/pdf" ? (await readFileAsText(resumeFile)).slice(0, 3000) : 'See attached PDF.'}
-      
-      Provide your objective evaluation in EXACTLY the following format:
-      SCORE: X/10
-      
-      STRONG POINTS (3 bullet points):
-      - 
-      
-      WEAK POINTS (3 bullet points):
-      - 
-      
-      MISSING KEYWORDS (comma separated, max 8 - only include highly relevant industry keywords that are missing):
-      
-      ONE LINE VERDICT:
-      [Provide a single, highly actionable, professional sentence on what the candidate must do to improve their chances of passing an ATS and recruiter screen.]`;
+        const textContent = resumeFile.type !== "application/pdf" 
+          ? await readFileAsText(resumeFile) 
+          : '';
+        const promptText = buildResumePrompt(textContent);
         
         const parts = [{ text: promptText }];
         if (resumeFile.type === "application/pdf") {

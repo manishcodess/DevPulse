@@ -40,13 +40,21 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
 
     // 1. Add user message to state
     const userTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    setMessages(prev => [...prev, { role: 'user', content: userMessage, timestamp: userTime }]);
+    const updatedMessages = [...messages, { role: 'user', content: userMessage, timestamp: userTime }];
+    setMessages(updatedMessages);
     setIsLoading(true);
 
     try {
-      // 2. Request streaming response from backend
-      // Backend now handles system instructions securely using user context
-      const response = await streamAIChat(userMessage);
+      // 2. Build conversation history in Gemini's format for context
+      const history = updatedMessages
+        .filter(m => m.content && m.content.trim()) // skip empty messages
+        .map(m => ({
+          role: m.role === 'ai' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }));
+
+      // 3. Request streaming response with full history
+      const response = await streamAIChat(history);
 
       // 4. Get stream reader and text decoder
       const reader = response.getReader();
