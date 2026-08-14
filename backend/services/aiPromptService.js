@@ -1,5 +1,37 @@
-const { getCache } = require('../config/redis');
+const { getCache, setCache } = require('../config/redis');
 const User = require('../models/User');
+const { getGithubStats } = require('./githubService');
+const { getLeetcodeStats } = require('./leetcodeService');
+
+const getOrFetchGithubData = async (username) => {
+  if (!username) return null;
+  const cacheKey = `cache:github:${username}`;
+  let data = await getCache(cacheKey);
+  if (!data) {
+    try {
+      data = await getGithubStats(username);
+      if (data) await setCache(cacheKey, data, 3600);
+    } catch (err) {
+      console.error(`Failed to fetch GitHub stats for ${username}:`, err.message);
+    }
+  }
+  return data;
+};
+
+const getOrFetchLeetcodeData = async (username) => {
+  if (!username) return null;
+  const cacheKey = `cache:leetcode:${username}`;
+  let data = await getCache(cacheKey);
+  if (!data) {
+    try {
+      data = await getLeetcodeStats(username);
+      if (data) await setCache(cacheKey, data, 3600);
+    } catch (err) {
+      console.error(`Failed to fetch LeetCode stats for ${username}:`, err.message);
+    }
+  }
+  return data;
+};
 
 const buildSystemPrompt = async (userId) => {
   const user = await User.findById(userId);
@@ -7,19 +39,8 @@ const buildSystemPrompt = async (userId) => {
 
   const firstName = user.name?.split(' ')[0] || 'User';
 
-  let githubData = null;
-  let leetcodeData = null;
-
-  // Try to fetch data from cache if usernames exist
-  if (user.githubUsername) {
-    const ghCache = await getCache(`cache:github:${user.githubUsername}`);
-    if (ghCache) githubData = ghCache;
-  }
-
-  if (user.leetcodeUsername) {
-    const lcCache = await getCache(`cache:leetcode:${user.leetcodeUsername}`);
-    if (lcCache) leetcodeData = lcCache;
-  }
+  const githubData = await getOrFetchGithubData(user.githubUsername);
+  const leetcodeData = await getOrFetchLeetcodeData(user.leetcodeUsername);
 
   // Optional sections
   const bioSection = user.bio
@@ -55,18 +76,8 @@ const buildDailyBriefPrompt = async (userId) => {
 
   const firstName = user.name?.split(' ')[0] || 'User';
 
-  let githubData = null;
-  let leetcodeData = null;
-
-  if (user.githubUsername) {
-    const ghCache = await getCache(`cache:github:${user.githubUsername}`);
-    if (ghCache) githubData = ghCache;
-  }
-
-  if (user.leetcodeUsername) {
-    const lcCache = await getCache(`cache:leetcode:${user.leetcodeUsername}`);
-    if (lcCache) leetcodeData = lcCache;
-  }
+  const githubData = await getOrFetchGithubData(user.githubUsername);
+  const leetcodeData = await getOrFetchLeetcodeData(user.leetcodeUsername);
 
   return `You are DevPulse, a Senior Software Engineer and AI Technical Mentor for ${firstName}.
 
