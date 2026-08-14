@@ -35,11 +35,11 @@ router.post('/:username', async (req, res) => {
     const { username } = req.params;
     const cacheKey = `cache:leetcode:${username}`;
 
-    // 1. Check Redis cache first
-    const cachedData = await getCache(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    // 1. Check Redis cache first (DISABLED FOR TESTING)
+    // const cachedData = await getCache(cacheKey);
+    // if (cachedData) {
+    //   return res.json(cachedData);
+    // }
 
     // 2. Fetch fresh data from LeetCode GraphQL API
     const response = await fetch('https://leetcode.com/graphql', {

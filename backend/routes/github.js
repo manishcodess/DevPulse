@@ -10,11 +10,11 @@ router.get('/:username/stats', async (req, res) => {
     const { username } = req.params;
     const cacheKey = `cache:github:${username}`;
 
-    // 1. Check Redis cache first
-    const cachedData = await getCache(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
+    // 1. Check Redis cache first (DISABLED FOR TESTING)
+    // const cachedData = await getCache(cacheKey);
+    // if (cachedData) {
+    //   return res.json(cachedData);
+    // }
 
     // 2. Fetch fresh data using the Service Layer
     const result = await getGithubStats(username);
