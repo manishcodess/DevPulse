@@ -16,20 +16,12 @@ const app = express();
 const { redis } = require('./config/redis');
 app.set('redis', redis);
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5174'
-];
+// Removed allowedOrigins array
 
 app.use(cors({ 
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Allow all origins for local development
+    callback(null, true);
   }, 
   credentials: true 
 }));

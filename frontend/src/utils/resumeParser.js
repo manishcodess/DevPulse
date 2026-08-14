@@ -11,8 +11,13 @@ export const parseResumeAnalysis = (analysisText) => {
   const weakMatch = analysisText.match(/WEAK POINTS[^\n]*\n([\s\S]*?)(?=MISSING KEYWORDS)/i);
   const weakPoints = weakMatch ? weakMatch[1].split('\n').filter(p => p.trim().startsWith('-')) : [];
 
-  const keywordMatch = analysisText.match(/MISSING KEYWORDS:?\s*([^\n]*)/i);
-  const keywords = keywordMatch ? keywordMatch[1].split(',').map(k => k.trim()).filter(Boolean) : [];
+  const keywordMatch = analysisText.match(/MISSING KEYWORDS[^\n]*\n([\s\S]*?)(?=ONE LINE VERDICT)/i);
+  const keywords = keywordMatch 
+    ? keywordMatch[1]
+        .split(/,|\n/)
+        .map(k => k.trim().replace(/^-/, '').trim())
+        .filter(k => k && !k.includes('comma separated'))
+    : [];
 
   const verdictMatch = analysisText.match(/ONE LINE VERDICT:?\s*([^\n]*)/i);
   const verdict = verdictMatch ? verdictMatch[1] : "";

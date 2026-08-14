@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, ExternalLink, Menu, Edit2 } from 'lucide-react';
+import { Zap, ExternalLink, Menu, Edit2, Code } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 
 export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout, setUserCredentials }) {
@@ -75,24 +75,22 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
         </button>
       </div>
 
-      <div className="user-profile-card">
-        {githubData?.avatarUrl ? (
-          <img src={githubData.avatarUrl} alt="avatar" style={{width: 40, height: 40, borderRadius: '50%'}} />
-        ) : (
-          <div className="user-avatar">M</div>
-        )}
-        <div className="user-info">
-          <span className="user-name">{githubData?.username || userCredentials?.name?.split(' ')[0] || "Developer"}</span>
-          <span className="user-role">Full Stack Developer</span>
-          <div className="user-status-container">
-            <div className="status-dot"></div>
-            <span className="status-text">Online</span>
-          </div>
+      {!isPanelOpen && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '24px 0' }}>
+          {userCredentials?.github && (
+            <a href={`https://github.com/${githubData?.username || userCredentials?.github}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }} title="GitHub">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+              </svg>
+            </a>
+          )}
+          {userCredentials?.leetcode && (
+            <a href={leetcodeData?.profileUrl || `https://leetcode.com/${leetcodeData?.username || userCredentials?.leetcode}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }} title="LeetCode">
+              <Code size={22} />
+            </a>
+          )}
         </div>
-      </div>
-
-
-
+      )}
 
       <div className="sidebar-content">
         <div className="integration-card">
@@ -113,7 +111,7 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
           </div>
           
           {!userCredentials?.github ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Connect GitHub to track your commits and repos.</p>
               <input
                 placeholder="GitHub Username"
@@ -137,7 +135,7 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
                 <>
                   <div className="dev-stats-grid">
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Commits</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total Commits</span>
                       <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>{githubData.totalCommits}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -151,19 +149,19 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
                         fontWeight: Number(githubData.activeDays) > 0 ? 'bold' : 'normal',
                         color: Number(githubData.activeDays) > 0 ? '#10b981' : 'var(--text-muted)'
                       }}>
-                        {Number(githubData.activeDays) > 0 ? `🔥 ${githubData.activeDays}` : "Start your activity today!"}
+                        {Number(githubData.activeDays) > 0 ? `${githubData.activeDays} Days` : "Start your activity today!"}
                       </span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Languages</span>
-                      <span style={{ fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{githubData.languages?.join(', ') || '--'}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Top Language</span>
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{githubData.languages?.[0] || '--'}</span>
                     </div>
                   </div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '16px' }}>Last updated: just now</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '10px' }}>Last updated: just now</div>
                 </>
               )}
               {editingGithub && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Update your GitHub Username.</p>
                   <input
                     placeholder="New GitHub Username"
@@ -208,7 +206,7 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
           </div>
           
           {!userCredentials?.leetcode ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Connect LeetCode to track your problem solving stats.</p>
               <input
                 placeholder="LeetCode Username"
@@ -229,7 +227,7 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
               {!leetcodeData ? (
                 <div className="shimmer-loader" style={{ height: '40px', marginTop: '8px' }}></div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
                   {/* Total Solved */}
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                     <span style={{ fontSize: '28px', fontWeight: '800', color: 'var(--accent-orange)', letterSpacing: '-1px' }}>
@@ -239,7 +237,7 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
                   </div>
                   
                   {/* Difficulty Graph */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
                       <span style={{ color: '#10b981', fontWeight: '500' }}>Easy</span>
                       <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.easy ?? 0}</span>
@@ -266,7 +264,7 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
                   </div>
 
                   {/* Contest Rating */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Rating</span>
                       <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData?.rating ?? '--'}</span>

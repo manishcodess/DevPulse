@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { generateAIContent } from '../services/aiService';
+import { fetchDailyBrief } from '../services/aiService';
 import { getCachedData, setCachedData } from '../utils/storage';
 import { API_BASE_URL } from '../config';
-import { generateDailyBriefPrompt } from '../utils/promptGenerator';
 
 // useDevData fetches GitHub and LeetCode stats for the logged-in user,
 // then uses that data to generate a personalized AI daily brief.
@@ -18,26 +17,37 @@ export function useDevData(showToast, userCredentials = null) {
     setGithubData(null);
     setLeetcodeData(null);
 
+    if (!userCredentials) {
+      setBriefLoading(false);
+      return;
+    }
+
+    setBriefLoading(true);
+    let ignore = false;
+
     const fetchGithubData = async () => {
       const username = userCredentials?.github;
       if (!username) return null;
 
       const cacheKey = `devpulse-github-${username}`;
-      // Cache disabled temporarily to force fresh data
 
       try {
         const res = await fetch(`${API_BASE_URL}/github/${username}/stats`);
         if (!res.ok) throw new Error('GitHub fetch failed');
         const data = await res.json();
-        setCachedData(cacheKey, data);
-        setGithubData(data);
-        showToast('GitHub data loaded !');
+        if (!ignore) {
+          setCachedData(cacheKey, data);
+          setGithubData(data);
+          showToast('GitHub data loaded !');
+        }
         return data;
       } catch {
-        showToast('Could not load GitHub data ..', 'error');
-        const fallback = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
-        setGithubData(fallback);
-        return fallback;
+        if (!ignore) {
+          showToast('Could not load GitHub data ..', 'error');
+          const fallback = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
+          setGithubData(fallback);
+          return fallback;
+        }
       }
     };
 
@@ -46,10 +56,8 @@ export function useDevData(showToast, userCredentials = null) {
       if (!username) return null;
 
       const cacheKey = `devpulse-leetcode-${username}`;
-      // Cache disabled temporarily to force fresh data
 
       try {
-        // LeetCode route is POST because the backend calls LeetCode's GraphQL API
         const res = await fetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST' });
         if (!res.ok) throw new Error('LeetCode fetch failed');
         const data = await res.json();
@@ -66,40 +74,56 @@ export function useDevData(showToast, userCredentials = null) {
           recentSubmissions: data.recentSubmissions || [],
           streak: 0 
         };
-        setCachedData(cacheKey, formatted);
-        setLeetcodeData(formatted);
-        showToast('LeetCode data loaded ✓');
+        if (!ignore) {
+          setCachedData(cacheKey, formatted);
+          setLeetcodeData(formatted);
+          showToast('LeetCode data loaded ✓');
+        }
         return formatted;
       } catch {
-        showToast('Could not load LeetCode data', 'error');
-        const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
-        setLeetcodeData(fallback);
-        return fallback;
+        if (!ignore) {
+          showToast('Could not load LeetCode data', 'error');
+          const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
+          setLeetcodeData(fallback);
+          return fallback;
+        }
       }
     };
 
-    const generateDailyBrief = async (ghData, lcData) => {
+    const generateDailyBrief = async () => {
       const firstName = userCredentials?.name?.split(' ')[0] || 'Developer';
-      const prompt = generateDailyBriefPrompt(firstName, ghData, lcData);
 
       try {
-        const text = await generateAIContent(prompt);
-        setDailyBrief(text);
-        showToast('Daily brief ready !');
-      } catch {
-        setDailyBrief(`Ready to level up today, ${firstName}? Let's focus on consistent progress.`);
+        const text = await fetchDailyBrief();
+        if (!ignore) {
+          setDailyBrief(text);
+          showToast('Daily brief ready !');
+        }
+      } catch (err) {
+        console.error('Failed to generate daily brief:', err);
+        if (!ignore) {
+          setDailyBrief(`Ready to level up today, ${firstName}? Let's focus on consistent progress.`);
+        }
       } finally {
-        setBriefLoading(false);
+        if (!ignore) {
+          setBriefLoading(false);
+        }
       }
     };
 
     // Fetch both in parallel, then generate the brief once both resolve
     const initialize = async () => {
-      const [ghData, lcData] = await Promise.all([fetchGithubData(), fetchLeetcodeData()]);
-      await generateDailyBrief(ghData, lcData);
+      await Promise.all([fetchGithubData(), fetchLeetcodeData()]);
+      if (!ignore) {
+        await generateDailyBrief();
+      }
     };
 
     initialize();
+    
+    return () => {
+      ignore = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userCredentials]);
 

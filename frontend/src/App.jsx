@@ -195,9 +195,18 @@ function AppContent() {
                     <Link to="/chat" className={`tab-btn ${location.pathname === '/chat' ? 'active' : ''}`}>💬 Coach Chat <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+K</span></Link>
                     <Link to="/resume" className={`tab-btn ${location.pathname === '/resume' ? 'active' : ''}`}>📄 Resume Review <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+R</span></Link>
                   </div>
-                  <button onClick={handleLogout} className="logout-btn-attractive" style={{ marginLeft: 'auto' }}>
-                    <LogOut size={16} /> Log Out
-                  </button>
+                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {githubData?.avatarUrl ? (
+                      <img src={githubData.avatarUrl} alt="avatar" style={{width: 32, height: 32, borderRadius: '50%', border: '1px solid var(--border-color)'}} title={githubData?.username || userCredentials?.name?.split(' ')[0] || "Developer"} />
+                    ) : (
+                      <div className="user-avatar" style={{width: 32, height: 32, fontSize: '14px', border: '1px solid var(--border-color)'}} title={userCredentials?.name || "Developer"}>
+                        {(userCredentials?.name || "M")[0].toUpperCase()}
+                      </div>
+                    )}
+                    <button onClick={handleLogout} className="logout-btn-attractive">
+                      <LogOut size={16} /> Log Out
+                    </button>
+                  </div>
                 </div>
 
                 <Routes>
@@ -213,6 +222,7 @@ function AppContent() {
                       submitMessage={submitMessage}
                       getGreeting={getGreeting}
                       userCredentials={userCredentials}
+                      briefLoading={briefLoading}
                     />
                   } />
                   <Route path="/resume" element={

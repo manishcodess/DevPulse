@@ -20,7 +20,8 @@ export default function ChatInterface({
   messagesEndRef,
   submitMessage,
   getGreeting,
-  userCredentials
+  userCredentials,
+  briefLoading
 }) {
   const userName = userCredentials?.name?.split(' ')[0] || "User";
   
@@ -47,7 +48,7 @@ export default function ChatInterface({
           <ChatMessage key={index} msg={msg} />
         ))}
 
-        {messages.length === 1 && (
+        {messages.length <= 1 && !briefLoading && (
           <div className="suggested-prompts-container">
             <div className="suggested-prompts">
               {SUGGESTED_PROMPTS.map((prompt, i) => (
@@ -64,7 +65,7 @@ export default function ChatInterface({
           </div>
         )}
         
-        {isLoading && (
+        {(isLoading || briefLoading) && (
           <div className="message-wrapper ai">
             <div className="message ai">
               <div className="typing-indicator">

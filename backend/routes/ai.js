@@ -1,12 +1,26 @@
 const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
 const { verifyToken } = require('../middleware/authMiddleware');
-const { buildSystemPrompt } = require('../services/aiPromptService');
+const { buildSystemPrompt, buildDailyBriefPrompt } = require('../services/aiPromptService');
 
 const router = express.Router();
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const AI_MODEL = 'gemini-3.1-flash-lite';
+
+// ─── GET /api/ai/daily-brief ─────────────────────────────────────────────────
+router.get('/daily-brief', verifyToken, async (req, res) => {
+  try {
+    const prompt = await buildDailyBriefPrompt(req.userId);
+    const result = await ai.models.generateContent({
+      model: AI_MODEL,
+      contents: prompt,
+    });
+    res.json({ text: result.text });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // ─── POST /api/ai/generate (One-shot) ─────────────────────────────────────────
 router.post('/generate', verifyToken, async (req, res) => {

@@ -23,6 +23,18 @@ export async function generateAIContent(contents) {
   return data.text;
 }
 
+export async function fetchDailyBrief() {
+  const response = await fetch(`${API_BASE_URL}/ai/daily-brief`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include'
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to fetch daily brief');
+  return data.text;
+}
+
 // ─── streamAIChat ─────────────────────────────────────────────────────────────
 // Opens a streaming connection to the backend using Server-Sent Events (SSE).
 // Returns the raw response.body (a ReadableStream) for the caller to process.

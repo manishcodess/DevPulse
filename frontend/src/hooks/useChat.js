@@ -4,28 +4,22 @@ import { streamAIChat } from '../services/aiService';
 export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, briefLoading) {
   const firstName = userCredentials?.name?.split(' ')[0] || 'User';
 
-  const [messages, setMessages] = useState([
-    {
-      role: 'ai',
-      content: 'Analyzing your profiles...',
-      isLoading: true,
-      isDailyBrief: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
-    setMessages(prev => {
-       if (dailyBrief) {
-          return prev.map((m, index) => {
-             if (index === 0 && m.isDailyBrief) {
-                return { ...m, content: dailyBrief, isLoading: false };
-             }
-             return m;
-          });
-       }
-       return prev;
-    });
+    if (dailyBrief) {
+      setMessages(prev => {
+        // Prevent adding duplicate daily briefs if effect re-runs
+        if (prev.some(m => m.isDailyBrief)) return prev;
+        
+        return [{
+          role: 'ai',
+          content: dailyBrief,
+          isDailyBrief: true,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }, ...prev];
+      });
+    }
   }, [dailyBrief]);
 
   const [input, setInput] = useState('');
