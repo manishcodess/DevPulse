@@ -48,8 +48,11 @@ export default function ChatInterface({
           <ChatMessage key={index} msg={msg} />
         ))}
 
-        {messages.length <= 1 && !briefLoading && (
+        {messages.length <= 1 && (
           <div className="suggested-prompts-container">
+            <div className="suggested-prompts-title">
+              <span>💡 Suggested questions to get started:</span>
+            </div>
             <div className="suggested-prompts">
               {SUGGESTED_PROMPTS.map((prompt, i) => (
                 <button 
@@ -81,6 +84,21 @@ export default function ChatInterface({
       </main>
 
       <div className="input-area">
+        {messages.length > 1 && (
+          <div className="chat-quick-suggestions">
+            {SUGGESTED_PROMPTS.map((prompt, i) => (
+              <button
+                key={i}
+                type="button"
+                className="quick-prompt-chip"
+                onClick={() => handleSuggestedPrompt(prompt)}
+                disabled={isLoading || isStreaming}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
         <form className="input-form" onSubmit={handleSubmit}>
           <input
             type="text"
