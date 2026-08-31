@@ -23,8 +23,9 @@ export async function generateAIContent(contents) {
   return data.text;
 }
 
-export async function fetchDailyBrief() {
-  const response = await apiFetch(`${API_BASE_URL}/ai/daily-brief`, {
+export async function fetchDailyBrief(forceFresh = false) {
+  const url = forceFresh ? `${API_BASE_URL}/ai/daily-brief?fresh=true` : `${API_BASE_URL}/ai/daily-brief`;
+  const response = await apiFetch(url, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include'

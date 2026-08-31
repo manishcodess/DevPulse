@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchDailyBrief } from '../services/aiService';
 import { getCachedData, setCachedData } from '../utils/storage';
 import { API_BASE_URL } from '../config';
@@ -13,8 +13,117 @@ export function useDevData(showToast, userCredentials = null) {
   const [dailyBrief, setDailyBrief]   = useState('');
   const [briefLoading, setBriefLoading] = useState(true);
 
+  const fetchGithubData = async (forceFresh = false) => {
+    const username = userCredentials?.github;
+    if (!username) return null;
+
+    const cacheKey = `devpulse-github-${username}`;
+    if (forceFresh) {
+      try { localStorage.removeItem(cacheKey); } catch (e) {}
+    } else {
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        setGithubData(cached);
+        showToast('GitHub data loaded from cache ✓');
+        return cached;
+      }
+    }
+
+    try {
+      const url = forceFresh 
+        ? `${API_BASE_URL}/github/${username}/stats?fresh=true` 
+        : `${API_BASE_URL}/github/${username}/stats`;
+      const res = await apiFetch(url, { credentials: 'include' });
+      const data = await res.json();
+      setCachedData(cacheKey, data);
+      setGithubData(data);
+      showToast(forceFresh ? 'GitHub data refreshed ✓' : 'GitHub data loaded !');
+      return data;
+    } catch (err) {
+      showToast(`Could not load GitHub data: ${err.message}`, 'error');
+      const fallback = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
+      setGithubData(fallback);
+      return fallback;
+    }
+  };
+
+  const fetchLeetcodeData = async (forceFresh = false) => {
+    const username = userCredentials?.leetcode;
+    if (!username) return null;
+
+    const cacheKey = `devpulse-leetcode-${username}`;
+    if (forceFresh) {
+      try { localStorage.removeItem(cacheKey); } catch (e) {}
+    } else {
+      const cached = getCachedData(cacheKey);
+      if (cached) {
+        setLeetcodeData(cached);
+        showToast('LeetCode data loaded from cache ✓');
+        return cached;
+      }
+    }
+
+    try {
+      const url = forceFresh 
+        ? `${API_BASE_URL}/leetcode/${username}?fresh=true` 
+        : `${API_BASE_URL}/leetcode/${username}`;
+      const res = await apiFetch(url, { method: 'POST', credentials: 'include' });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const formatted = { 
+        total: data.total || 0, 
+        easy: data.easy || 0, 
+        medium: data.medium || 0, 
+        hard: data.hard || 0, 
+        rating: data.rating,
+        top: data.top,
+        globalRank: data.globalRank,
+        highestRating: data.highestRating,
+        recentSubmissions: data.recentSubmissions || [],
+        streak: 0 
+      };
+      setCachedData(cacheKey, formatted);
+      setLeetcodeData(formatted);
+      showToast(forceFresh ? 'LeetCode data refreshed ✓' : 'LeetCode data loaded ✓');
+      return formatted;
+    } catch (err) {
+      showToast(`Could not load LeetCode data: ${err.message}`, 'error');
+      const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
+      setLeetcodeData(fallback);
+      return fallback;
+    }
+  };
+
+  const generateDailyBrief = async (forceFresh = false) => {
+    const firstName = userCredentials?.name?.split(' ')[0] || 'Developer';
+    setBriefLoading(true);
+
+    try {
+      const text = await fetchDailyBrief(forceFresh);
+      setDailyBrief(text);
+      showToast(forceFresh ? 'Daily brief updated ✓' : 'Daily brief ready !');
+    } catch (err) {
+      console.error('Failed to generate daily brief:', err);
+      setDailyBrief(`Ready to level up today, ${firstName}? Let's focus on consistent progress.`);
+    } finally {
+      setBriefLoading(false);
+    }
+  };
+
+  const refetchData = useCallback(async (forceFresh = true) => {
+    if (!userCredentials) return;
+    setBriefLoading(true);
+    if (forceFresh) {
+      showToast('Clearing cache and fetching latest info...', 'info');
+    }
+    await Promise.all([fetchGithubData(forceFresh), fetchLeetcodeData(forceFresh)]);
+    await generateDailyBrief(forceFresh);
+    if (forceFresh) {
+      showToast('Cache cleared & latest data fetched successfully!', 'success');
+    }
+  }, [userCredentials]);
+
   useEffect(() => {
-    // Reset data when user changes so we don't briefly show the wrong person's stats
     setGithubData(null);
     setLeetcodeData(null);
 
@@ -23,124 +132,8 @@ export function useDevData(showToast, userCredentials = null) {
       return;
     }
 
-    setBriefLoading(true);
-    let ignore = false;
+    refetchData(false);
+  }, [userCredentials, refetchData]);
 
-    const fetchGithubData = async () => {
-      const username = userCredentials?.github;
-      if (!username) return null;
-
-      const cacheKey = `devpulse-github-${username}`;
-      const cached = getCachedData(cacheKey);
-      if (cached) {
-        if (!ignore) {
-          setGithubData(cached);
-          showToast('GitHub data loaded from cache ✓');
-        }
-        return cached;
-      }
-
-      try {
-        const res = await apiFetch(`${API_BASE_URL}/github/${username}/stats`, { credentials: 'include' });
-        const data = await res.json();
-        if (!ignore) {
-          setCachedData(cacheKey, data);
-          setGithubData(data);
-          showToast('GitHub data loaded !');
-        }
-        return data;
-      } catch (err) {
-        if (!ignore) {
-          showToast(`Could not load GitHub data: ${err.message}`, 'error');
-          const fallback = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
-          setGithubData(fallback);
-          return fallback;
-        }
-      }
-    };
-
-    const fetchLeetcodeData = async () => {
-      const username = userCredentials?.leetcode;
-      if (!username) return null;
-
-      const cacheKey = `devpulse-leetcode-${username}`;
-      const cached = getCachedData(cacheKey);
-      if (cached) {
-        if (!ignore) {
-          setLeetcodeData(cached);
-          showToast('LeetCode data loaded from cache ✓');
-        }
-        return cached;
-      }
-
-      try {
-        const res = await apiFetch(`${API_BASE_URL}/leetcode/${username}`, { method: 'POST', credentials: 'include' });
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        const formatted = { 
-          total: data.total || 0, 
-          easy: data.easy || 0, 
-          medium: data.medium || 0, 
-          hard: data.hard || 0, 
-          rating: data.rating,
-          top: data.top,
-          globalRank: data.globalRank,
-          highestRating: data.highestRating,
-          recentSubmissions: data.recentSubmissions || [],
-          streak: 0 
-        };
-        if (!ignore) {
-          setCachedData(cacheKey, formatted);
-          setLeetcodeData(formatted);
-          showToast('LeetCode data loaded ✓');
-        }
-        return formatted;
-      } catch (err) {
-        if (!ignore) {
-          showToast(`Could not load LeetCode data: ${err.message}`, 'error');
-          const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
-          setLeetcodeData(fallback);
-          return fallback;
-        }
-      }
-    };
-
-    const generateDailyBrief = async () => {
-      const firstName = userCredentials?.name?.split(' ')[0] || 'Developer';
-
-      try {
-        const text = await fetchDailyBrief();
-        if (!ignore) {
-          setDailyBrief(text);
-          showToast('Daily brief ready !');
-        }
-      } catch (err) {
-        console.error('Failed to generate daily brief:', err);
-        if (!ignore) {
-          setDailyBrief(`Ready to level up today, ${firstName}? Let's focus on consistent progress.`);
-        }
-      } finally {
-        if (!ignore) {
-          setBriefLoading(false);
-        }
-      }
-    };
-
-    // Fetch both in parallel, then generate the brief once both resolve
-    const initialize = async () => {
-      await Promise.all([fetchGithubData(), fetchLeetcodeData()]);
-      if (!ignore) {
-        await generateDailyBrief();
-      }
-    };
-
-    initialize();
-    
-    return () => {
-      ignore = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userCredentials]);
-
-  return { githubData, leetcodeData, dailyBrief, briefLoading };
+  return { githubData, leetcodeData, dailyBrief, briefLoading, refetchData };
 }

@@ -3,11 +3,13 @@ import { Send } from 'lucide-react';
 import ChatMessage from './ChatMessage';
 
 const SUGGESTED_PROMPTS = [
+  "Importance of last 5 LeetCode questions I solved",
+  "Underrated advice for tech interviews",
   "How do I get my first 20 LPA job?",
-  "What should i improve in my resume?",
-  "How to master Sliding window?",
+  "What should I improve in my resume?",
   "Roast my GitHub profile",
-  "HR interview Tips"
+  "How to master Sliding Window & DP?",
+  "HR round tips to stand out"
 ];
 
 export default function ChatInterface({
