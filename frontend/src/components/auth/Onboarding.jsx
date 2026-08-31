@@ -82,22 +82,17 @@ export default function Onboarding({ onComplete, onSkip }) {
 
   return (
     <div className="auth-container">
-      <div className="auth-background">
-        <div className="auth-blob blob-1"></div>
-        <div className="auth-blob blob-2"></div>
-      </div>
-      
       <div className="auth-card" style={{ maxWidth: '480px' }}>
         <div className="auth-header">
-          <div className="auth-logo-bg" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
-            <Save size={24} color="#ffffff" />
+          <div className="auth-logo-bg" style={{ background: '#2563eb' }}>
+            <Save size={22} color="#ffffff" />
           </div>
           <h1 className="auth-title">Complete Your Profile</h1>
-          <p className="auth-subtitle">Link your developer profiles to unlock personalized insights and stats.</p>
+          <p className="auth-subtitle">Link your developer profiles to unlock personalized insights.</p>
         </div>
 
         {error && (
-          <div style={{ color: '#ef4444', fontSize: '13px', textAlign: 'center', marginBottom: '16px', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
+          <div className="auth-error-banner">
             {error}
           </div>
         )}
@@ -179,7 +174,7 @@ export default function Onboarding({ onComplete, onSkip }) {
                 type="submit" 
                 className={`auth-submit-btn ${isSubmitting ? 'loading' : ''}`} 
                 disabled={isSubmitting}
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', flex: '1' }}
+                style={{ flex: '1' }}
               >
                 {isSubmitting ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -197,15 +192,19 @@ export default function Onboarding({ onComplete, onSkip }) {
                 type="button" 
                 onClick={onSkip}
                 style={{
-                  background: 'var(--surface-2)',
-                  color: 'var(--text-primary)',
+                  background: 'var(--surface-1)',
+                  color: 'var(--text-muted)',
                   border: '1px solid var(--border-color)',
-                  borderRadius: '8px',
-                  flex: '1',
+                  borderRadius: '10px',
+                  padding: '12px 16px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  flex: '0.8',
                   cursor: 'pointer',
+                  transition: 'background-color 0.15s ease, color 0.15s ease'
                 }}
               >
-                Skip
+                Skip for now
               </button>
             </div>
         </form>

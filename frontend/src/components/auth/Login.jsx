@@ -40,22 +40,17 @@ export default function Login({ onLogin, onSwitchToSignup }) {
 
   return (
     <div className="auth-container">
-      <div className="auth-background">
-        <div className="auth-blob blob-1"></div>
-        <div className="auth-blob blob-2"></div>
-      </div>
-      
       <div className="auth-card">
         <div className="auth-header">
           <div className="auth-logo-bg">
-            <Zap size={24} color="#ffffff" />
+            <Zap size={22} color="#ffffff" />
           </div>
           <h1 className="auth-title">Welcome Back</h1>
-          <p className="auth-subtitle">Log in to continue your developer journey.</p>
+          <p className="auth-subtitle">Log in to continue to DevPulse.</p>
         </div>
 
         {error && (
-          <div style={{ color: '#ef4444', fontSize: '13px', textAlign: 'center', marginBottom: '16px', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
+          <div className="auth-error-banner">
             {error}
           </div>
         )}

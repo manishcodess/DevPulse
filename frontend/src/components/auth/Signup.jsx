@@ -41,22 +41,17 @@ export default function Signup({ onSignup, onSwitchToLogin }) {
 
   return (
     <div className="auth-container">
-      <div className="auth-background">
-        <div className="auth-blob blob-1"></div>
-        <div className="auth-blob blob-2"></div>
-      </div>
-      
       <div className="auth-card">
         <div className="auth-header">
           <div className="auth-logo-bg">
-            <Zap size={24} color="#ffffff" />
+            <Zap size={22} color="#ffffff" />
           </div>
-          <h1 className="auth-title">Welcome to DevPulse</h1>
-          <p className="auth-subtitle">Your AI developer coach is waiting. Let's get started.</p>
+          <h1 className="auth-title">Create an Account</h1>
+          <p className="auth-subtitle">Join DevPulse to level up your developer journey.</p>
         </div>
 
         {error && (
-          <div style={{ color: '#ef4444', fontSize: '13px', textAlign: 'center', marginBottom: '16px', background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px' }}>
+          <div className="auth-error-banner">
             {error}
           </div>
         )}
