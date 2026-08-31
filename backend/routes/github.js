@@ -10,11 +10,14 @@ router.get('/:username/stats', verifyToken, async (req, res) => {
   try {
     const { username } = req.params;
     const cacheKey = `cache:github:${username}`;
+    const bypassCache = req.query.fresh === 'true';
 
-    // 1. Check Redis cache first
-    const cachedData = await getCache(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
+    // 1. Check Redis cache first (if not forcing fresh data)
+    if (!bypassCache) {
+      const cachedData = await getCache(cacheKey);
+      if (cachedData) {
+        return res.json(cachedData);
+      }
     }
 
     // 2. Fetch fresh data using the Service Layer

@@ -3,10 +3,10 @@ const User = require('../models/User');
 const { getGithubStats } = require('./githubService');
 const { getLeetcodeStats } = require('./leetcodeService');
 
-const getOrFetchGithubData = async (username) => {
+const getOrFetchGithubData = async (username, bypassCache = false) => {
   if (!username) return null;
   const cacheKey = `cache:github:${username}`;
-  let data = await getCache(cacheKey);
+  let data = !bypassCache ? await getCache(cacheKey) : null;
   if (!data) {
     try {
       data = await getGithubStats(username);
@@ -18,10 +18,10 @@ const getOrFetchGithubData = async (username) => {
   return data;
 };
 
-const getOrFetchLeetcodeData = async (username) => {
+const getOrFetchLeetcodeData = async (username, bypassCache = false) => {
   if (!username) return null;
   const cacheKey = `cache:leetcode:${username}`;
-  let data = await getCache(cacheKey);
+  let data = !bypassCache ? await getCache(cacheKey) : null;
   if (!data) {
     try {
       data = await getLeetcodeStats(username);
@@ -66,18 +66,18 @@ LeetCode Recent Solved: ${leetcodeData?.recentSubmissions?.length > 0 ? leetcode
 1. Core Identity: You are an experienced,Senior Engineer mentoring a junior/mid-level developer. 
 2. Tone:  encouraging, Communicate like a trusted tech lead and very very easy simple english.
 3. Personalization: Always ground your advice in the provided real-time metrics, bio, and resume context.
-4. Concision: Keep responses concise and focused (under 100 words) unless the user requests a detailed explanation or code review.
+4. Concision: Keep responses concise and focused (under 200 words) unless the user requests a detailed explanation or code review.
 5. Absolute Rule: Never introduce yourself as an AI or use phrases like "As an AI language model." You are DevPulse.`;
 };
 
-const buildDailyBriefPrompt = async (userId) => {
+const buildDailyBriefPrompt = async (userId, bypassCache = false) => {
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found');
 
   const firstName = user.name?.split(' ')[0] || 'User';
 
-  const githubData = await getOrFetchGithubData(user.githubUsername);
-  const leetcodeData = await getOrFetchLeetcodeData(user.leetcodeUsername);
+  const githubData = await getOrFetchGithubData(user.githubUsername, bypassCache);
+  const leetcodeData = await getOrFetchLeetcodeData(user.leetcodeUsername, bypassCache);
 
   return `You are DevPulse, a Senior Software Engineer and AI Technical Mentor for ${firstName}.
 
@@ -99,7 +99,7 @@ INSTRUCTIONS:
 3. Objective Feedback: Honestly evaluate their activity today compared to yesterday based on the provided metrics. Acknowledge streaks to encourage them, or acknowledge a lack of activity without guilt.
 4. Actionable Advice: Provide one specific, actionable recommendation (e.g., "Consider tackling a Hard LeetCode problem this week," or some tips to get good package and becoem good engineer
 5. Closing: End with a single, highly motivating sentence.
-6. Format: Write in a natural,very simple english and little conversational way Maximum 100words. Do NOT use bullet points. Do NOT sound robotic or use generic AI phrases. Communicate as a supportive senior engineer speaking directly to a junior.`;
+6. Format: Write in a natural, very simple english and little conversational way Maximum 200 words. Do NOT use bullet points. Do NOT sound robotic or use generic AI phrases. Communicate as a supportive senior engineer speaking directly to a junior.`;
 };
 
 module.exports = {
