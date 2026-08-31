@@ -175,8 +175,6 @@ function AppContent() {
               userCredentials={userCredentials}
               logout={handleLogout}
               setUserCredentials={setUserCredentials}
-              onClearCache={refetchData}
-              briefLoading={briefLoading}
             />
 
             <div className="mobile-header">
@@ -186,16 +184,6 @@ function AppContent() {
                 </div>
                 <span style={{ fontSize: '18px', fontWeight: 'bold' }}>DevPulse</span>
               </div>
-              <button 
-                onClick={() => refetchData(true)} 
-                disabled={briefLoading} 
-                className="clear-cache-btn" 
-                style={{ fontSize: '11px', padding: '4px 8px' }}
-                title="Clear cache and fetch latest live metrics"
-              >
-                <RotateCcw size={12} className={briefLoading ? 'spin-icon' : ''} />
-                <span>Clear Cache</span>
-              </button>
               <button onClick={() => setIsPanelOpen(true)} className="mobile-menu-btn">
                 <Menu size={24} />
               </button>
@@ -204,20 +192,37 @@ function AppContent() {
             <main className="main-content" style={{ position: 'relative' }}>
               <div className="app-container">
                 <div className="tabs-container">
-                  <div style={{ display: 'flex', gap: '16px' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <Link to="/chat" className={`tab-btn ${location.pathname === '/chat' ? 'active' : ''}`}>💬 Coach Chat <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+K</span></Link>
                     <Link to="/resume" className={`tab-btn ${location.pathname === '/resume' ? 'active' : ''}`}>📄 Resume Review <span style={{fontSize:'10px', opacity:0.5, marginLeft:'4px'}}>Ctrl+R</span></Link>
                   </div>
-                  <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  
+                  <div className="header-actions-glass">
                     {githubData?.avatarUrl ? (
-                      <img src={githubData.avatarUrl} alt="avatar" style={{width: 32, height: 32, borderRadius: '50%', border: '1px solid var(--border-color)'}} title={githubData?.username || userCredentials?.name?.split(' ')[0] || "Developer"} />
+                      <img 
+                        src={githubData.avatarUrl} 
+                        alt="avatar" 
+                        className="header-user-avatar" 
+                        title={githubData?.username || userCredentials?.name?.split(' ')[0] || "Developer"} 
+                      />
                     ) : (
-                      <div className="user-avatar" style={{width: 32, height: 32, fontSize: '14px', border: '1px solid var(--border-color)'}} title={userCredentials?.name || "Developer"}>
+                      <div className="header-user-avatar placeholder" title={userCredentials?.name || "Developer"}>
                         {(userCredentials?.name || "M")[0].toUpperCase()}
                       </div>
                     )}
+
+                    <button 
+                      onClick={() => refetchData(true)} 
+                      disabled={briefLoading} 
+                      className="clear-cache-btn" 
+                      title="Clear cache and fetch latest live metrics"
+                    >
+                      <RotateCcw size={13} className={briefLoading ? 'spin-icon' : ''} />
+                      <span>Clear Cache</span>
+                    </button>
+
                     <button onClick={handleLogout} className="logout-btn-attractive">
-                      <LogOut size={16} /> Log Out
+                      <LogOut size={15} /> Log Out
                     </button>
                   </div>
                 </div>

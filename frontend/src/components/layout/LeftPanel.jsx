@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Zap, ExternalLink, Menu, Edit2, Code, RotateCcw } from 'lucide-react';
+import { Zap, ExternalLink, Menu, Edit2, Code } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import { extractUsername } from '../../utils/username';
 import { apiFetch } from '../../utils/api';
 
-export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout, setUserCredentials, onClearCache, briefLoading }) {
+export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout, setUserCredentials }) {
   const [githubInput, setGithubInput] = useState('');
   const [leetcodeInput, setLeetcodeInput] = useState('');
   const [githubConnecting, setGithubConnecting] = useState(false);
@@ -39,8 +39,8 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
 
   return (
     <aside className={`left-panel ${!isPanelOpen ? 'closed' : ''}`}>
-      <div style={{ display: 'flex', flexDirection: isPanelOpen ? 'row' : 'column-reverse', alignItems: 'center', justifyContent: isPanelOpen ? 'space-between' : 'center', gap: isPanelOpen ? '8px' : '16px', padding: isPanelOpen ? '16px' : '16px 0', borderBottom: '1px solid var(--border-subtle)', minHeight: '72px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', flexDirection: isPanelOpen ? 'row' : 'column-reverse', alignItems: 'center', justifyContent: isPanelOpen ? 'space-between' : 'center', gap: isPanelOpen ? '0' : '16px', padding: isPanelOpen ? '16px' : '16px 0', borderBottom: '1px solid var(--border-subtle)', minHeight: '72px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div className="logo-icon-bg">
             <Zap size={20} color="#ffffff" />
           </div>
@@ -48,18 +48,6 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
             <span className="logo-text" style={{ fontSize: '18px', fontWeight: 'bold' }}>DevPulse</span>
           )}
         </div>
-
-        {isPanelOpen && (
-          <button 
-            onClick={() => onClearCache?.(true)}
-            disabled={briefLoading}
-            className="clear-cache-btn"
-            title="Clear cache and fetch latest live metrics"
-          >
-            <RotateCcw size={12} className={briefLoading ? 'spin-icon' : ''} />
-            <span>Clear Cache</span>
-          </button>
-        )}
 
         <button onClick={() => setIsPanelOpen(!isPanelOpen)} style={{ background: 'var(--surface-1)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', transition: 'all 0.2s ease' }}>
           <Menu size={20} />
