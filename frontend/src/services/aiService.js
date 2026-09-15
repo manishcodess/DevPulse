@@ -51,3 +51,21 @@ export async function streamAIChat(messageHistory) {
   return response.body; // ReadableStream — the caller reads chunks from this
 }
 
+export async function matchResumeWithJD(contents, jobDescription, textContent = '') {
+  const response = await apiFetch(`${API_BASE_URL}/ai/resume-match`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ contents, jobDescription, textContent }),
+  });
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(`Server returned error (${response.status}): ${text.slice(0, 120) || 'Non-JSON response'}`);
+  }
+
+  const data = await response.json();
+  if (data.error) throw new Error(data.error);
+  return data.data;
+}

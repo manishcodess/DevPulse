@@ -93,10 +93,10 @@ router.get('/me', verifyToken, async (req, res) => {
 // If validation fails, Zod throws a ZodError — we catch it and return a 400.
 
 const onboardSchema = z.object({
-  githubUsername:  z.string().max(100).optional(),
-  leetcodeUsername: z.string().max(100).optional(),
-  bio:             z.string().max(500).optional(),
-  resumeContext:   z.string().max(10000).optional(),
+  githubUsername:  z.string().max(100).optional().nullable(),
+  leetcodeUsername: z.string().max(100).optional().nullable(),
+  bio:             z.string().max(500).optional().nullable(),
+  resumeContext:   z.string().max(10000).optional().nullable(),
 });
 
 const resumeSchema = z.object({
@@ -104,16 +104,19 @@ const resumeSchema = z.object({
 });
 
 // ─── POST /api/auth/onboard ───────────────────────────────────────────────────
-// Called after signup to link GitHub/LeetCode usernames.
-// Validates both usernames against their real APIs before saving.
+// Called after signup or from profile settings to link/update/clear GitHub/LeetCode usernames.
+// Validates both usernames against their real APIs before saving if provided.
 router.post('/onboard', verifyToken, async (req, res) => {
   try {
     const { githubUsername, leetcodeUsername, bio, resumeContext } =
       onboardSchema.parse(req.body); // Throws ZodError if input is invalid
 
+    const trimmedGithub = typeof githubUsername === 'string' ? githubUsername.trim() : githubUsername;
+    const trimmedLeetcode = typeof leetcodeUsername === 'string' ? leetcodeUsername.trim() : leetcodeUsername;
+
     // Validate GitHub username exists (live API check)
-    if (githubUsername) {
-      const ghRes = await fetch(`https://api.github.com/users/${githubUsername}`, {
+    if (trimmedGithub) {
+      const ghRes = await fetch(`https://api.github.com/users/${trimmedGithub}`, {
         headers: { 'User-Agent': 'DevPulse-App' },
       });
       if (ghRes.status === 404) {
@@ -122,7 +125,7 @@ router.post('/onboard', verifyToken, async (req, res) => {
     }
 
     // Validate LeetCode username exists (via GraphQL)
-    if (leetcodeUsername) {
+    if (trimmedLeetcode) {
       const lcRes = await fetch('https://leetcode.com/graphql', {
         method: 'POST',
         headers: {
@@ -132,7 +135,7 @@ router.post('/onboard', verifyToken, async (req, res) => {
         },
         body: JSON.stringify({
           query: `query($username: String!) { matchedUser(username: $username) { username } }`,
-          variables: { username: leetcodeUsername },
+          variables: { username: trimmedLeetcode },
         }),
       });
       const lcText = await lcRes.text();
@@ -150,10 +153,14 @@ router.post('/onboard', verifyToken, async (req, res) => {
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    user.githubUsername  = githubUsername  ?? user.githubUsername;
-    user.leetcodeUsername = leetcodeUsername ?? user.leetcodeUsername;
-    if (bio !== undefined)           user.bio = bio;
-    if (resumeContext !== undefined)  user.resumeContext = resumeContext;
+    if (githubUsername !== undefined) {
+      user.githubUsername = trimmedGithub || '';
+    }
+    if (leetcodeUsername !== undefined) {
+      user.leetcodeUsername = trimmedLeetcode || '';
+    }
+    if (bio !== undefined)           user.bio = bio ? bio.trim() : '';
+    if (resumeContext !== undefined)  user.resumeContext = resumeContext ? resumeContext.trim() : '';
     await user.save();
 
     res.json({ success: true, user: formatUser(user) });

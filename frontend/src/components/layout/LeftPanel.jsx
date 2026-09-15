@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Zap, ExternalLink, Menu, Edit2, Code } from 'lucide-react';
+import { Zap, ExternalLink, Menu, Edit2, Code, Trash2 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import { extractUsername } from '../../utils/username';
 import { apiFetch } from '../../utils/api';
 
-export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout, setUserCredentials }) {
+export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, leetcodeData, userCredentials, logout, setUserCredentials, showToast }) {
   const [githubInput, setGithubInput] = useState('');
   const [leetcodeInput, setLeetcodeInput] = useState('');
   const [githubConnecting, setGithubConnecting] = useState(false);
@@ -26,14 +26,87 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
         body: JSON.stringify(body),
       });
       const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
       // Update user credentials with new data
       setUserCredentials(prev => ({ ...prev, ...data.user }));
-      if (type === 'github') setEditingGithub(false);
-      if (type === 'leetcode') setEditingLeetcode(false);
+      if (type === 'github') {
+        setGithubInput('');
+        setEditingGithub(false);
+      }
+      if (type === 'leetcode') {
+        setLeetcodeInput('');
+        setEditingLeetcode(false);
+      }
+      if (showToast) {
+        showToast(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile linked successfully!`);
+      }
     } catch (err) {
       console.error(err);
-      alert(err.message);
-      // Could add toast here via a passed showToast, omitted for brevity
+      if (showToast) {
+        showToast(err.message, 'error');
+      } else {
+        alert(err.message);
+      }
+    }
+  };
+
+  const clearProfile = async (type) => {
+    const oldUsername = type === 'github' ? (githubData?.username || userCredentials?.github) : (leetcodeData?.username || userCredentials?.leetcode);
+    if (type === 'github') setGithubConnecting(true);
+    if (type === 'leetcode') setLeetcodeConnecting(true);
+
+    try {
+      const body = {};
+      if (type === 'github') body.githubUsername = '';
+      else if (type === 'leetcode') body.leetcodeUsername = '';
+
+      const res = await apiFetch(`${API_BASE_URL}/auth/onboard`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      // Clean up localStorage cached stats
+      if (oldUsername) {
+        try {
+          localStorage.removeItem(`devpulse-${type}-${oldUsername}`);
+        } catch (e) {}
+      }
+
+      // Update user credentials with cleared data
+      setUserCredentials(prev => ({ 
+        ...prev, 
+        ...(data.user || (type === 'github' ? { github: '', githubUsername: '' } : { leetcode: '', leetcodeUsername: '' }))
+      }));
+
+      if (type === 'github') {
+        setGithubInput('');
+        setEditingGithub(false);
+      }
+      if (type === 'leetcode') {
+        setLeetcodeInput('');
+        setEditingLeetcode(false);
+      }
+
+      if (showToast) {
+        showToast(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile cleared. Ready for fresh connection!`, 'info');
+      }
+    } catch (err) {
+      console.error(`Failed to clear ${type} profile:`, err);
+      if (showToast) {
+        showToast(err.message || `Failed to clear ${type} profile`, 'error');
+      } else {
+        alert(err.message);
+      }
+    } finally {
+      if (type === 'github') setGithubConnecting(false);
+      if (type === 'leetcode') setLeetcodeConnecting(false);
     }
   };
 
@@ -141,23 +214,64 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
               )}
               {editingGithub && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Update your GitHub Username.</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Update or clear your GitHub profile.</p>
                   <input
                     placeholder="New GitHub Username"
                     value={githubInput}
                     onChange={(e) => setGithubInput(e.target.value)}
                     style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: '13px' }}
                   />
-                  <button
-                    onClick={() => { setGithubConnecting(true); connectService('github').finally(() => setGithubConnecting(false)); }}
-                    disabled={!githubInput || githubConnecting}
-                    style={{ width: '100%', background: 'linear-gradient(135deg, #2ea043, #238636)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                  >
-                    {githubConnecting ? 'Updating...' : 'Update GitHub'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => { setGithubConnecting(true); connectService('github').finally(() => setGithubConnecting(false)); }}
+                      disabled={!githubInput || githubConnecting}
+                      style={{ 
+                        flex: 1, 
+                        background: 'linear-gradient(135deg, #2ea043, #238636)', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        padding: '9px 8px', 
+                        cursor: (!githubInput || githubConnecting) ? 'not-allowed' : 'pointer', 
+                        opacity: (!githubInput || githubConnecting) ? 0.6 : 1,
+                        fontSize: '13px', 
+                        fontWeight: '500', 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {githubConnecting ? 'Updating...' : 'Update'}
+                    </button>
+                    <button
+                      onClick={() => clearProfile('github')}
+                      disabled={githubConnecting}
+                      className="clear-profile-btn"
+                      style={{ 
+                        flex: 1, 
+                        background: 'rgba(239, 68, 68, 0.12)', 
+                        color: '#f87171', 
+                        border: '1px solid rgba(239, 68, 68, 0.25)', 
+                        borderRadius: '8px', 
+                        padding: '9px 8px', 
+                        cursor: githubConnecting ? 'not-allowed' : 'pointer', 
+                        fontSize: '13px', 
+                        fontWeight: '500', 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title="Clear this profile to start fresh"
+                    >
+                      <Trash2 size={13} /> Clear Profile
+                    </button>
+                  </div>
                   <button
                     onClick={() => setEditingGithub(false)}
-                    style={{ width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '4px' }}
+                    style={{ width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '2px' }}
                   >
                     Cancel
                   </button>
@@ -266,23 +380,64 @@ export default function LeftPanel({ isPanelOpen, setIsPanelOpen, githubData, lee
               )}
               {editingLeetcode && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Update your LeetCode Username.</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Update or clear your LeetCode profile.</p>
                   <input
                     placeholder="New LeetCode Username"
                     value={leetcodeInput}
                     onChange={(e) => setLeetcodeInput(e.target.value)}
                     style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--surface-2)', color: 'var(--text-primary)', fontSize: '13px' }}
                   />
-                  <button
-                    onClick={() => { setLeetcodeConnecting(true); connectService('leetcode').finally(() => setLeetcodeConnecting(false)); }}
-                    disabled={!leetcodeInput || leetcodeConnecting}
-                    style={{ width: '100%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                  >
-                    {leetcodeConnecting ? 'Updating...' : 'Update LeetCode'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => { setLeetcodeConnecting(true); connectService('leetcode').finally(() => setLeetcodeConnecting(false)); }}
+                      disabled={!leetcodeInput || leetcodeConnecting}
+                      style={{ 
+                        flex: 1, 
+                        background: 'linear-gradient(135deg, #f59e0b, #d97706)', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        padding: '9px 8px', 
+                        cursor: (!leetcodeInput || leetcodeConnecting) ? 'not-allowed' : 'pointer', 
+                        opacity: (!leetcodeInput || leetcodeConnecting) ? 0.6 : 1,
+                        fontSize: '13px', 
+                        fontWeight: '500', 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {leetcodeConnecting ? 'Updating...' : 'Update'}
+                    </button>
+                    <button
+                      onClick={() => clearProfile('leetcode')}
+                      disabled={leetcodeConnecting}
+                      className="clear-profile-btn"
+                      style={{ 
+                        flex: 1, 
+                        background: 'rgba(239, 68, 68, 0.12)', 
+                        color: '#f87171', 
+                        border: '1px solid rgba(239, 68, 68, 0.25)', 
+                        borderRadius: '8px', 
+                        padding: '9px 8px', 
+                        cursor: leetcodeConnecting ? 'not-allowed' : 'pointer', 
+                        fontSize: '13px', 
+                        fontWeight: '500', 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        gap: '6px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      title="Clear this profile to start fresh"
+                    >
+                      <Trash2 size={13} /> Clear Profile
+                    </button>
+                  </div>
                   <button
                     onClick={() => setEditingLeetcode(false)}
-                    style={{ width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '4px' }}
+                    style={{ width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '2px' }}
                   >
                     Cancel
                   </button>

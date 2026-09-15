@@ -1,7 +1,8 @@
 const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
+const User = require('../models/User');
 const { verifyToken } = require('../middleware/authMiddleware');
-const { buildSystemPrompt, buildDailyBriefPrompt } = require('../services/aiPromptService');
+const { buildSystemPrompt, buildDailyBriefPrompt, buildResumeJdMatchPrompt } = require('../services/aiPromptService');
 
 const router = express.Router();
 
@@ -37,6 +38,59 @@ router.post('/generate', verifyToken, async (req, res) => {
     res.json({ text: result.text });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── POST /api/ai/resume-match (ATS Match & Gap Analysis) ─────────────────────
+router.post('/resume-match', verifyToken, async (req, res) => {
+  try {
+    const { contents, jobDescription, textContent } = req.body;
+    if (!contents && !textContent) {
+      return res.status(400).json({ error: "Missing resume contents" });
+    }
+
+    const promptText = buildResumeJdMatchPrompt(textContent || '', jobDescription || '');
+
+    let finalContents;
+    if (Array.isArray(contents)) {
+      const inlineParts = contents.filter(part => part && part.inlineData);
+      finalContents = [...inlineParts, { text: promptText }];
+    } else if (contents && typeof contents === 'object' && contents.inlineData) {
+      finalContents = [contents, { text: promptText }];
+    } else {
+      finalContents = promptText;
+    }
+
+    const result = await ai.models.generateContent({
+      model: AI_MODEL,
+      contents: finalContents,
+      config: {
+        responseMimeType: 'application/json',
+      }
+    });
+
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(result.text);
+    } catch {
+      const cleaned = result.text.replace(/```json\n?|\n?```/g, '').trim();
+      parsedResult = JSON.parse(cleaned);
+    }
+
+    // Auto-update user's resumeContext so AI chat mentor retains the target role & gaps
+    if (req.userId) {
+      try {
+        const summaryContext = `TARGET ROLE: ${parsedResult.targetRoleIdentified || jobDescription || 'Software Engineer'}\nATS MATCH SCORE: ${parsedResult.matchScore}/100 (${parsedResult.matchTier || 'Evaluated'})\nMATCHING SKILLS: ${(parsedResult.matchingSkills || []).join(', ')}\nMISSING REQUIRED SKILLS: ${(parsedResult.missingSkills || []).join(', ')}\nVERDICT: ${parsedResult.verdict || ''}`;
+        await User.findByIdAndUpdate(req.userId, { resumeContext: summaryContext });
+      } catch (saveErr) {
+        console.warn('Could not auto-save resumeContext to user profile:', saveErr.message);
+      }
+    }
+
+    res.json({ success: true, data: parsedResult });
+  } catch (error) {
+    console.error('Error in /resume-match:', error);
+    res.status(500).json({ error: error.message || 'Failed to analyze resume with target job description' });
   }
 });
 
@@ -88,3 +142,4 @@ router.post('/chat', verifyToken, async (req, res) => {
 });
 
 module.exports = router;
+

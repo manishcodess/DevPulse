@@ -101,8 +101,16 @@ function AppContent() {
   const {
     resumeAnalysis,
     resumeLoading,
+    selectedFile,
+    jobDescription,
+    setJobDescription,
+    analysisMode,
+    setAnalysisMode,
     fileInputRef,
-    handleResumeUpload
+    handleResumeUpload,
+    handleFileChange,
+    clearSelectedFile,
+    runAnalysis
   } = useResume(showToast, userCredentials, setUserCredentials);
 
   const getGreeting = () => {
@@ -175,6 +183,7 @@ function AppContent() {
               userCredentials={userCredentials}
               logout={handleLogout}
               setUserCredentials={setUserCredentials}
+              showToast={showToast}
             />
 
             <div className="mobile-header">
@@ -247,8 +256,17 @@ function AppContent() {
                     <ResumeReview 
                       fileInputRef={fileInputRef}
                       handleResumeUpload={handleResumeUpload}
+                      handleFileChange={handleFileChange}
+                      clearSelectedFile={clearSelectedFile}
+                      selectedFile={selectedFile}
+                      jobDescription={jobDescription}
+                      setJobDescription={setJobDescription}
+                      analysisMode={analysisMode}
+                      setAnalysisMode={setAnalysisMode}
+                      runAnalysis={runAnalysis}
                       resumeLoading={resumeLoading}
                       resumeAnalysis={resumeAnalysis}
+                      userCredentials={userCredentials}
                     />
                   } />
                 </Routes>
