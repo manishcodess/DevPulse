@@ -1,7 +1,12 @@
+const { GoogleGenAI } = require('@google/genai');
 const { getCache, setCache } = require('../config/redis');
 const User = require('../models/User');
+const Conversation = require('../models/Conversation');
 const { getGithubStats } = require('./githubService');
 const { getLeetcodeStats } = require('./leetcodeService');
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const AI_MODEL = 'gemini-3.1-flash-lite';
 
 const getOrFetchGithubData = async (username, bypassCache = false) => {
   if (!username) return null;
@@ -33,16 +38,88 @@ const getOrFetchLeetcodeData = async (username, bypassCache = false) => {
   return data;
 };
 
-const buildSystemPrompt = async (userId) => {
+/**
+ * Builds a dynamic, context-evolving system prompt combining:
+ * 1. Live GitHub & LeetCode developer telemetry
+ * 2. Persistent Developer Memory Vector (Goals, Weaknesses, Strengths, Language)
+ * 3. User Bio & ATS Resume Feedback
+ * 4. Recent Cross-Thread Conversation Context & Active Topic
+ */
+const buildSystemPrompt = async (userId, activeCategory = 'general') => {
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found');
 
   const firstName = user.name?.split(' ')[0] || 'User';
 
-  const githubData = await getOrFetchGithubData(user.githubUsername);
-  const leetcodeData = await getOrFetchLeetcodeData(user.leetcodeUsername);
+  const [githubData, leetcodeData, recentConversations] = await Promise.all([
+    getOrFetchGithubData(user.githubUsername),
+    getOrFetchLeetcodeData(user.leetcodeUsername),
+    Conversation.find({ userId })
+      .select('title category summary updatedAt')
+      .sort({ updatedAt: -1 })
+      .limit(4)
+      .lean()
+      .catch(() => [])
+  ]);
 
-  // Optional sections
+  // 1. Developer Memory & Profile Insights
+  const memories = Array.isArray(user.devMemories) ? user.devMemories : [];
+  const goals = memories.filter(m => m.category === 'goal').map(m => m.text);
+  const weaknesses = memories.filter(m => m.category === 'weakness').map(m => m.text);
+  const strengths = memories.filter(m => m.category === 'strength').map(m => m.text);
+  const preferences = memories.filter(m => m.category === 'preference' || m.category === 'tech_stack' || m.category === 'general').map(m => m.text);
+
+  let memorySection = '';
+  const memoryLines = [];
+
+  if (user.targetRole) {
+    memoryLines.push(`- Target Role: ${user.targetRole}`);
+  }
+  if (user.targetCompanies && user.targetCompanies.length > 0) {
+    memoryLines.push(`- Target Companies: ${user.targetCompanies.join(', ')}`);
+  }
+  if (user.preferredLanguage) {
+    memoryLines.push(`- Preferred Programming / Interview Language: ${user.preferredLanguage}`);
+  }
+  if (goals.length > 0) {
+    memoryLines.push(`- Active Goals: ${goals.join('; ')}`);
+  }
+  if (weaknesses.length > 0) {
+    memoryLines.push(`- Known Weaknesses & Growth Areas: ${weaknesses.join('; ')}`);
+  }
+  if (strengths.length > 0) {
+    memoryLines.push(`- Core Strengths & Proficiencies: ${strengths.join('; ')}`);
+  }
+  if (preferences.length > 0) {
+    memoryLines.push(`- Developer Notes & Preferences: ${preferences.join('; ')}`);
+  }
+
+  if (memoryLines.length > 0) {
+    memorySection = `\n[PERSISTENT DEVELOPER MEMORY & PROFILE INSIGHTS]\n(Use these persistent facts naturally to tailor your guidance and interview questions without repeating them mechanically):\n${memoryLines.join('\n')}\n`;
+  }
+
+  // 2. Cross-Thread Context Summary
+  let crossThreadSection = '';
+  if (recentConversations && recentConversations.length > 0) {
+    const threadSummaries = recentConversations
+      .map(c => `• "${c.title}" (${c.category || 'general'})${c.summary ? `: ${c.summary}` : ''}`)
+      .join('\n');
+    crossThreadSection = `\n[RECENT TOPICS & THREADS WORKED ON BY ${firstName.toUpperCase()}]:\n${threadSummaries}\n`;
+  }
+
+  // 3. Category-Specific Persona Tweaks
+  let categoryGuidance = '';
+  if (activeCategory === 'system_design') {
+    categoryGuidance = `\n[ACTIVE FOCUS: SYSTEM DESIGN]\n- Think like a Principal Engineer / Tech Lead. Emphasize trade-offs, scalability bottlenecks, database choices (SQL vs NoSQL), caching layers, rate limiting, and CAP theorem nuances. Ask clarifying questions on RPS/data scale.`;
+  } else if (activeCategory === 'dsa') {
+    categoryGuidance = `\n[ACTIVE FOCUS: DATA STRUCTURES & ALGORITHMS]\n- Focus on pattern recognition (e.g., Two Pointers, Monotonic Stack, Sliding Window, DP memoization). Provide Big-O (Time and Space complexity) breakdowns. When user is stuck, prefer 3-tier progressive hints over dumping full solutions immediately.`;
+  } else if (activeCategory === 'mock_interview') {
+    categoryGuidance = `\n[ACTIVE FOCUS: MOCK INTERVIEW]\n- Actively simulate an interview environment. Present realistic problems, assess trade-offs, test edge cases, and ask follow-up questions just like a FAANG interviewer.`;
+  } else if (activeCategory === 'resume') {
+    categoryGuidance = `\n[ACTIVE FOCUS: RESUME & ATS OPTIMIZATION]\n- Emphasize STAR method bullets (Situation, Task, Action, Result), quantifiable scale metrics (e.g. latency, throughput, users), and alignment with target job descriptions.`;
+  }
+
+  // 4. Bio & Resume Context
   const bioSection = user.bio
     ? `\n[ABOUT ${firstName.toUpperCase()}]:\n"${user.bio}"\n`
     : '';
@@ -62,7 +139,7 @@ const buildSystemPrompt = async (userId) => {
 - Gentle motivation on slow days: If they have low activity, missed streaks, or feel stuck, never shame or judge them. Instead, gently nudge them with kindness and belief: "Hey, I know you can do better!", "Off days happen, let's reset and get 1 small win today."
 - Keep responses snappy, practical, and conversational (usually 100-200 words), unless ${firstName} asks for a deep code explanation, system design walkthrough, or debugging help.
 - Absolute Rule: Never speak like a robot or say phrases like "As an AI language model." You are DevPulse, ${firstName}'s smart study buddy.
-${bioSection}${resumeSection}
+${bioSection}${resumeSection}${memorySection}${crossThreadSection}${categoryGuidance}
 ---
 [REAL-TIME STATS FOR ${firstName.toUpperCase()}]
 - GitHub: ${githubData?.totalCommits ?? 'Unknown'} total commits | ${githubData?.publicRepos ?? 'Unknown'} public repos
@@ -164,9 +241,128 @@ CRITICAL: Return ONLY valid JSON in the exact structure below, with no markdown 
 }`;
 };
 
+/**
+ * Asynchronous post-chat background analyzer:
+ * 1. Analyzes whether the user disclosed new persistent facts (goals, weaknesses, tech stack, preferences, target companies).
+ * 2. If new facts are found, auto-merges them into User.devMemories.
+ * 3. Auto-titles the conversation if it currently has a default title.
+ * 4. Updates conversation summary.
+ */
+const extractMemoryAndTitleFromChat = async (userId, conversationId, userMessage, aiResponse) => {
+  try {
+    if (!userId || !userMessage) return;
+
+    const [user, conversation] = await Promise.all([
+      User.findById(userId),
+      conversationId ? Conversation.findById(conversationId) : null
+    ]);
+
+    if (!user) return;
+
+    const isDefaultTitle = !conversation || !conversation.title || conversation.title === 'New Coaching Session' || conversation.title === 'New Chat';
+
+    const prompt = `Analyze this chat exchange between a developer and their AI coach (DevPulse).
+
+USER MESSAGE:
+"""
+${userMessage.slice(0, 1500)}
+"""
+
+AI RESPONSE:
+"""
+${(aiResponse || '').slice(0, 1000)}
+"""
+
+EXISTING USER MEMORIES:
+${JSON.stringify((user.devMemories || []).map(m => m.text))}
+
+TASK:
+1. Extract any NEW persistent facts, goals, weaknesses, tech stack preferences, target companies, or interview targets revealed by the user in this message that are NOT already in Existing User Memories.
+2. If this is the start of a conversation or needs a title, generate a concise, snappy 3-5 word title for this chat topic.
+3. Provide a 1-sentence summary of what this chat thread is focusing on.
+
+Return JSON in this exact structure with NO markdown fences:
+{
+  "newMemories": [
+    {
+      "category": "goal" | "weakness" | "strength" | "preference" | "tech_stack" | "general",
+      "text": "Clear, concise fact about the user (e.g., 'Targeting Amazon SDE-2 by Q3', 'Struggles with DP on trees', 'Prefers code examples in TypeScript')"
+    }
+  ],
+  "suggestedTitle": "3-5 word descriptive topic title",
+  "category": "general" | "system_design" | "dsa" | "resume" | "mock_interview" | "career",
+  "summary": "1-sentence summary of the discussion"
+}`;
+
+    const result = await ai.models.generateContent({
+      model: AI_MODEL,
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+      }
+    });
+
+    let data;
+    try {
+      data = JSON.parse(result.text);
+    } catch {
+      const cleaned = result.text.replace(/```json\n?|\n?```/g, '').trim();
+      data = JSON.parse(cleaned);
+    }
+
+    // 1. Merge new memories if found
+    if (data && Array.isArray(data.newMemories) && data.newMemories.length > 0) {
+      const existingTexts = new Set((user.devMemories || []).map(m => m.text.toLowerCase().trim()));
+      const toAdd = [];
+
+      for (const mem of data.newMemories) {
+        if (!mem.text || typeof mem.text !== 'string') continue;
+        const normalized = mem.text.toLowerCase().trim();
+        // Ignore generic/too short strings
+        if (normalized.length < 5 || existingTexts.has(normalized)) continue;
+
+        toAdd.push({
+          category: ['goal', 'weakness', 'strength', 'preference', 'tech_stack', 'general'].includes(mem.category) ? mem.category : 'general',
+          text: mem.text.trim(),
+          source: 'ai_extracted',
+          confidence: 0.9,
+          createdAt: new Date()
+        });
+        existingTexts.add(normalized);
+      }
+
+      if (toAdd.length > 0) {
+        await User.findByIdAndUpdate(userId, {
+          $push: { devMemories: { $each: toAdd } }
+        });
+      }
+    }
+
+    // 2. Update conversation title, summary & category
+    if (conversation) {
+      const updates = {};
+      if (isDefaultTitle && data?.suggestedTitle) {
+        updates.title = data.suggestedTitle.slice(0, 80);
+      }
+      if (data?.summary) {
+        updates.summary = data.summary.slice(0, 200);
+      }
+      if (data?.category && conversation.category === 'general') {
+        updates.category = data.category;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await Conversation.findByIdAndUpdate(conversationId, updates);
+      }
+    }
+  } catch (err) {
+    console.warn('extractMemoryAndTitleFromChat non-critical error:', err.message);
+  }
+};
+
 module.exports = {
   buildSystemPrompt,
   buildDailyBriefPrompt,
-  buildResumeJdMatchPrompt
+  buildResumeJdMatchPrompt,
+  extractMemoryAndTitleFromChat
 };
-

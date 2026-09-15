@@ -5,10 +5,11 @@ const mongoose = require('mongoose');
 
 const cookieParser = require('cookie-parser');
 
-const authRoutes    = require('./routes/auth');
-const aiRoutes      = require('./routes/ai');
-const githubRoutes  = require('./routes/github');
-const leetcodeRoutes = require('./routes/leetcode');
+const authRoutes         = require('./routes/auth');
+const aiRoutes           = require('./routes/ai');
+const githubRoutes       = require('./routes/github');
+const leetcodeRoutes     = require('./routes/leetcode');
+const conversationRoutes = require('./routes/conversations');
 
 // ─── App Setup ────────────────────────────────────────────────────────────────
 
@@ -61,10 +62,11 @@ app.use((req, res, next) => {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
-app.use('/api/auth',     authRoutes);
-app.use('/api/ai',       aiRoutes);
-app.use('/api/github',   githubRoutes);
-app.use('/api/leetcode', leetcodeRoutes);
+app.use('/api/auth',          authRoutes);
+app.use('/api/ai',            aiRoutes);
+app.use('/api/github',        githubRoutes);
+app.use('/api/leetcode',      leetcodeRoutes);
+app.use('/api/conversations', conversationRoutes);
 
 // ─── Fallback & Error Handlers (Always JSON) ─────────────────────────────────
 

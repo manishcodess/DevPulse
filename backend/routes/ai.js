@@ -1,8 +1,14 @@
 const express = require('express');
 const { GoogleGenAI } = require('@google/genai');
 const User = require('../models/User');
+const Conversation = require('../models/Conversation');
 const { verifyToken } = require('../middleware/authMiddleware');
-const { buildSystemPrompt, buildDailyBriefPrompt, buildResumeJdMatchPrompt } = require('../services/aiPromptService');
+const {
+  buildSystemPrompt,
+  buildDailyBriefPrompt,
+  buildResumeJdMatchPrompt,
+  extractMemoryAndTitleFromChat
+} = require('../services/aiPromptService');
 
 const router = express.Router();
 
@@ -81,7 +87,12 @@ router.post('/resume-match', verifyToken, async (req, res) => {
     if (req.userId) {
       try {
         const summaryContext = `TARGET ROLE: ${parsedResult.targetRoleIdentified || jobDescription || 'Software Engineer'}\nATS MATCH SCORE: ${parsedResult.matchScore}/100 (${parsedResult.matchTier || 'Evaluated'})\nMATCHING SKILLS: ${(parsedResult.matchingSkills || []).join(', ')}\nMISSING REQUIRED SKILLS: ${(parsedResult.missingSkills || []).join(', ')}\nVERDICT: ${parsedResult.verdict || ''}`;
-        await User.findByIdAndUpdate(req.userId, { resumeContext: summaryContext });
+        
+        const updates = { resumeContext: summaryContext };
+        if (parsedResult.targetRoleIdentified) {
+          updates.targetRole = parsedResult.targetRoleIdentified;
+        }
+        await User.findByIdAndUpdate(req.userId, updates);
       } catch (saveErr) {
         console.warn('Could not auto-save resumeContext to user profile:', saveErr.message);
       }
@@ -94,10 +105,9 @@ router.post('/resume-match', verifyToken, async (req, res) => {
   }
 });
 
-// ─── POST /api/ai/chat (Super Simple Text Streaming) ─────────────────────────
-// Streams text chunks directly as Gemini generates them
+// ─── POST /api/ai/chat (Super Simple Text Streaming with Multi-Thread Persistence) ───
 router.post('/chat', verifyToken, async (req, res) => {
-  const { contents } = req.body;
+  const { contents, conversationId, activeCategory } = req.body;
   if (!contents) return res.status(400).json({ error: "Missing 'contents'" });
 
   // Set streaming headers to disable any buffering in proxies / Node
@@ -111,8 +121,10 @@ router.post('/chat', verifyToken, async (req, res) => {
     res.flushHeaders();
   }
 
+  let fullAiResponse = '';
+
   try {
-    const systemInstruction = await buildSystemPrompt(req.userId);
+    const systemInstruction = await buildSystemPrompt(req.userId, activeCategory || 'general');
 
     const stream = await ai.models.generateContentStream({
       model: AI_MODEL,
@@ -123,6 +135,7 @@ router.post('/chat', verifyToken, async (req, res) => {
     // Send text chunks directly to client as they arrive
     for await (const chunk of stream) {
       if (chunk.text) {
+        fullAiResponse += chunk.text;
         res.write(chunk.text);
         if (typeof res.flush === 'function') {
           res.flush();
@@ -131,6 +144,57 @@ router.post('/chat', verifyToken, async (req, res) => {
     }
 
     res.end(); // Finish response stream
+
+    // ─── Post-Stream Background Actions (Persistence & Auto Evolution) ────────
+    // Find or locate conversation and persist latest user message + AI response
+    (async () => {
+      try {
+        let convId = conversationId;
+        let lastUserText = '';
+
+        if (Array.isArray(contents) && contents.length > 0) {
+          const lastItem = contents[contents.length - 1];
+          if (lastItem.parts && lastItem.parts[0]?.text) {
+            lastUserText = lastItem.parts[0].text;
+          }
+        }
+
+        if (convId) {
+          const conv = await Conversation.findOne({ _id: convId, userId: req.userId });
+          if (conv) {
+            const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // Check if last message was already user text
+            const hasUserMsg = conv.messages.some(
+              m => m.role === 'user' && m.content === lastUserText
+            );
+
+            const newMessages = [];
+            if (!hasUserMsg && lastUserText) {
+              newMessages.push({ role: 'user', content: lastUserText, timestamp: timeNow });
+            }
+            if (fullAiResponse) {
+              newMessages.push({ role: 'ai', content: fullAiResponse, timestamp: timeNow });
+            }
+
+            if (newMessages.length > 0) {
+              await Conversation.findByIdAndUpdate(convId, {
+                $push: { messages: { $each: newMessages } },
+                $set: { updatedAt: new Date() }
+              });
+            }
+          }
+        }
+
+        // Trigger memory extraction and automatic title refinement in background
+        if (lastUserText && fullAiResponse) {
+          await extractMemoryAndTitleFromChat(req.userId, convId, lastUserText, fullAiResponse);
+        }
+      } catch (bgErr) {
+        console.warn('Background message save/memory extraction error:', bgErr.message);
+      }
+    })();
+
   } catch (error) {
     if (!res.headersSent) {
       res.status(500).json({ error: error.message });
@@ -142,4 +206,3 @@ router.post('/chat', verifyToken, async (req, res) => {
 });
 
 module.exports = router;
-

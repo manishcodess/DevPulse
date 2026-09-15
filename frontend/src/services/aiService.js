@@ -35,17 +35,15 @@ export async function fetchDailyBrief(forceFresh = false) {
   return data.text;
 }
 
-// ─── streamAIChat ─────────────────────────────────────────────────────────────
-// Opens a streaming connection to the backend for chat messages.
-// Returns the raw response.body (a ReadableStream) for the caller to process.
-// Sends full conversation history so the AI maintains context across messages.
-export async function streamAIChat(messageHistory) {
+export async function streamAIChat(messageHistory, conversationId = null, activeCategory = 'general') {
   const response = await apiFetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({
       contents: messageHistory,
+      conversationId,
+      activeCategory
     }),
   });
   return response.body; // ReadableStream — the caller reads chunks from this

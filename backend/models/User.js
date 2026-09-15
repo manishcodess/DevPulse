@@ -39,7 +39,47 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: '',
     trim: true
-  }
+  },
+  targetRole: {
+    type: String,
+    default: '',
+    trim: true
+  },
+  targetCompanies: [{
+    type: String,
+    trim: true
+  }],
+  preferredLanguage: {
+    type: String,
+    default: '',
+    trim: true
+  },
+  devMemories: [{
+    category: {
+      type: String,
+      enum: ['goal', 'weakness', 'strength', 'preference', 'tech_stack', 'general'],
+      default: 'general'
+    },
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 300
+    },
+    source: {
+      type: String,
+      enum: ['manual', 'ai_extracted'],
+      default: 'manual'
+    },
+    confidence: {
+      type: Number,
+      default: 1.0
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

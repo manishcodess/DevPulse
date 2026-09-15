@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Menu, Zap, LogOut, RotateCcw } from 'lucide-react';
 import { useDevData } from './hooks/useDevData';
 import { useChat } from './hooks/useChat';
+import { useDevMemories } from './hooks/useDevMemories';
 import { API_BASE_URL } from './config';
 import { apiFetch } from './utils/api';
 import { useResume } from './hooks/useResume';
@@ -31,7 +32,6 @@ function AppContent() {
 
   // ─── Cookie‑based auth check ───────────────────────────────────────
   useEffect(() => {
-    // No token needed; the auth cookie (HttpOnly) is sent automatically
     apiFetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
@@ -39,7 +39,6 @@ function AppContent() {
           setUserCredentials(data.user);
           setIsAuthenticated(true);
         } else {
-          // If the server responded without a user, ensure the UI reflects logged‑out state
           setIsAuthenticated(false);
           setUserCredentials(null);
         }
@@ -69,7 +68,7 @@ function AppContent() {
     showToast('Onboarding skipped. You can connect accounts later.');
     navigate('/chat');
   };
-  // Logout handler that clears HttpOnly cookie via backend
+
   const handleLogout = () => {
     apiFetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
       .then(() => {
@@ -86,7 +85,12 @@ function AppContent() {
 
   const { githubData, leetcodeData, dailyBrief, briefLoading, refetchData } = useDevData(showToast, userCredentials);
   
+  const devMemoriesState = useDevMemories(showToast, userCredentials);
+
   const {
+    conversations,
+    activeConversationId,
+    activeConversation,
     messages,
     input,
     setInput,
@@ -95,8 +99,15 @@ function AppContent() {
     messagesEndRef,
     inputRef,
     submitMessage,
-    scrollToBottom
-  } = useChat(githubData, leetcodeData, userCredentials, dailyBrief, briefLoading);
+    scrollToBottom,
+    createNewThread,
+    selectThread,
+    renameThread,
+    togglePinThread,
+    deleteThread,
+    updateCategory,
+    refreshConversations
+  } = useChat(githubData, leetcodeData, userCredentials, dailyBrief, briefLoading, showToast);
 
   const {
     resumeAnalysis,
@@ -121,10 +132,10 @@ function AppContent() {
   };
 
   useEffect(() => {
-    document.title = messages.length > 1 
-      ? `DevPulse (${messages.length - 1} msgs) — Your Dev Coach`
+    document.title = activeConversation?.title
+      ? `${activeConversation.title} — DevPulse`
       : "DevPulse — Your Dev Coach";
-  }, [messages]);
+  }, [activeConversation]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -135,11 +146,14 @@ function AppContent() {
       } else if (e.ctrlKey && e.key === 'r') {
         e.preventDefault();
         navigate('/resume');
+      } else if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        createNewThread('New Coaching Session', 'general');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [inputRef, navigate]);
+  }, [inputRef, navigate, createNewThread]);
 
   useEffect(() => {
     if (location.pathname === '/chat') {
@@ -184,6 +198,14 @@ function AppContent() {
               logout={handleLogout}
               setUserCredentials={setUserCredentials}
               showToast={showToast}
+              conversations={conversations}
+              activeConversationId={activeConversationId}
+              selectThread={selectThread}
+              createNewThread={createNewThread}
+              renameThread={renameThread}
+              togglePinThread={togglePinThread}
+              deleteThread={deleteThread}
+              devMemoriesState={devMemoriesState}
             />
 
             <div className="mobile-header">
@@ -221,13 +243,13 @@ function AppContent() {
                     )}
 
                     <button 
-                      onClick={() => refetchData(true)} 
+                      onClick={() => { refetchData(true); devMemoriesState.refreshMemories(); refreshConversations(); }} 
                       disabled={briefLoading} 
                       className="clear-cache-btn" 
                       title="Clear cache and fetch latest live metrics"
                     >
                       <RotateCcw size={13} className={briefLoading ? 'spin-icon' : ''} />
-                      <span>Clear Cache</span>
+                      <span>Sync Data</span>
                     </button>
 
                     <button onClick={handleLogout} className="logout-btn-attractive">
@@ -250,6 +272,12 @@ function AppContent() {
                       getGreeting={getGreeting}
                       userCredentials={userCredentials}
                       briefLoading={briefLoading}
+                      activeConversation={activeConversation}
+                      createNewThread={createNewThread}
+                      renameThread={renameThread}
+                      togglePinThread={togglePinThread}
+                      updateCategory={updateCategory}
+                      devMemoriesState={devMemoriesState}
                     />
                   } />
                   <Route path="/resume" element={
