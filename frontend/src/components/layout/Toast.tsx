@@ -22,3 +22,4 @@ export default function Toast({ toast }: ToastProps) {
     </div>
   );
 }
+

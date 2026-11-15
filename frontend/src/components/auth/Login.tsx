@@ -111,3 +111,4 @@ export default function Login({ onLogin, onSwitchToSignup }: LoginProps) {
     </div>
   );
 }
+

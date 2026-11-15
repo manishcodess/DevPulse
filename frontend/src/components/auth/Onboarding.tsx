@@ -217,3 +217,4 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
     </div>
   );
 }
+

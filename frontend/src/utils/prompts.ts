@@ -26,3 +26,4 @@ MISSING KEYWORDS (comma separated, max 8 - only include highly relevant industry
 ONE LINE VERDICT:
 [Provide a single, encouraging yet honest and actionable sentence in simple English on the most important thing they should improve to stand out to recruiters and pass ATS screens.]`;
 };
+

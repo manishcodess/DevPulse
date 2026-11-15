@@ -76,3 +76,4 @@ export async function matchResumeWithJD(
   if (data.error) throw new Error(data.error);
   return data.data;
 }
+

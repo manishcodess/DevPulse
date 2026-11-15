@@ -67,3 +67,4 @@ export async function updateProfileInsights(insights: {
   const data = await response.json();
   return data;
 }
+

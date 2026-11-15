@@ -40,3 +40,4 @@ export const readFileAsText = (file: File): Promise<string> => {
     reader.readAsText(file);
   });
 };
+

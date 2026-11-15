@@ -75,3 +75,4 @@ export const parseResumeAnalysis = (analysisInput: any): ParsedResumeResult | nu
     verdict
   };
 };
+

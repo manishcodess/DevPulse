@@ -32,3 +32,4 @@ export const setCachedData = <T = unknown>(key: string, data: T): void => {
     console.error(`Error saving cache for ${key}:`, error);
   }
 };
+
