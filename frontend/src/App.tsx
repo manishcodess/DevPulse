@@ -6,7 +6,7 @@ import { useDevMemories } from './hooks/useDevMemories';
 import { API_BASE_URL } from './config';
 import { apiFetch } from './utils/api';
 import { useResume } from './hooks/useResume';
-import Toast from './components/layout/Toast';
+import Toast, { ToastData } from './components/layout/Toast';
 import LeftPanel from './components/layout/LeftPanel';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import ChatInterface from './components/chat/ChatInterface';
@@ -14,18 +14,19 @@ import ResumeReview from './components/resume/ResumeReview';
 import Signup from './components/auth/Signup';
 import Login from './components/auth/Login';
 import Onboarding from './components/auth/Onboarding';
+import { ToastType, UserCredentials } from './types';
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userCredentials, setUserCredentials] = useState(null);
+  const [userCredentials, setUserCredentials] = useState<UserCredentials | any | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(window.innerWidth > 768);
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState<ToastData | null>(null);
   const [skipOnboarding, setSkipOnboarding] = useState(false);
   
   const navigate = useNavigate();
   const location = useLocation();
 
-  const showToast = (msg, type = 'success') => {
+  const showToast = (msg: string, type: ToastType = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
@@ -50,14 +51,14 @@ function AppContent() {
       });
   }, []);
 
-  const handleAuth = (data) => {
+  const handleAuth = (data: UserCredentials) => {
     setUserCredentials(data);
     setIsAuthenticated(true);
     showToast(`Welcome, ${data.name.split(' ')[0]}!`);
     navigate('/chat');
   };
 
-  const handleOnboardingComplete = (data) => {
+  const handleOnboardingComplete = (data: UserCredentials) => {
     setUserCredentials(data);
     showToast(`Profiles linked successfully!`);
     navigate('/chat');
@@ -138,7 +139,7 @@ function AppContent() {
   }, [activeConversation]);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault();
         navigate('/chat');
@@ -148,7 +149,7 @@ function AppContent() {
         navigate('/resume');
       } else if (e.ctrlKey && e.key === 'n') {
         e.preventDefault();
-        createNewThread('New Coaching Session', 'general');
+        if (createNewThread) createNewThread('New Coaching Session', 'general');
       }
     };
     window.addEventListener('keydown', handleKeyDown);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, FormEvent, RefObject } from 'react';
 import {
   Send,
   Plus,
@@ -6,14 +6,13 @@ import {
   Edit2,
   Check,
   X,
-  Sparkles,
-  Layers,
-  Brain,
-  MessageSquare
+  Brain
 } from 'lucide-react';
 import ChatMessage from './ChatMessage';
+import { ChatMsg } from '../../hooks/useChat';
+import { Conversation, UserCredentials } from '../../types';
 
-const CATEGORY_PROMPTS = {
+const CATEGORY_PROMPTS: Record<string, string[]> = {
   general: [
     "How is my coding consistency looking lately based on telemetry?",
     "Review the last few LeetCode problems I solved",
@@ -59,6 +58,26 @@ const CATEGORY_OPTIONS = [
   { id: 'career', label: '🚀 Career & Salary', color: '#f472b6' }
 ];
 
+interface ChatInterfaceProps {
+  messages: ChatMsg[];
+  isLoading: boolean;
+  isStreaming: boolean;
+  input: string;
+  setInput: (val: string) => void;
+  inputRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
+  messagesEndRef: RefObject<HTMLDivElement | null>;
+  submitMessage: (msg: string) => void;
+  getGreeting?: () => string;
+  userCredentials?: UserCredentials | null;
+  briefLoading?: boolean;
+  activeConversation?: any;
+  createNewThread?: (title?: string, category?: string) => Promise<any>;
+  renameThread?: (id: string, newTitle: string) => Promise<void>;
+  togglePinThread?: (id: string, currentPinned: boolean) => Promise<void>;
+  updateCategory?: (id: string, category: string) => Promise<void>;
+  devMemoriesState?: any;
+}
+
 export default function ChatInterface({
   messages,
   isLoading,
@@ -68,23 +87,21 @@ export default function ChatInterface({
   inputRef,
   messagesEndRef,
   submitMessage,
-  getGreeting,
   userCredentials,
   briefLoading,
-  // Multi-thread props
   activeConversation,
   createNewThread,
   renameThread,
   togglePinThread,
   updateCategory,
   devMemoriesState = {}
-}) {
-  const userName = userCredentials?.name?.split(' ')[0] || "User";
+}: ChatInterfaceProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
 
   const currentCategory = activeConversation?.category || 'general';
   const suggestedPrompts = CATEGORY_PROMPTS[currentCategory] || CATEGORY_PROMPTS.general;
+  const convId = activeConversation?.id || activeConversation?._id;
 
   const handleStartEditTitle = () => {
     setTitleDraft(activeConversation?.title || 'New Coaching Session');
@@ -92,13 +109,13 @@ export default function ChatInterface({
   };
 
   const handleSaveTitle = () => {
-    if (titleDraft.trim() && activeConversation?.id) {
-      renameThread(activeConversation.id, titleDraft.trim());
+    if (titleDraft.trim() && convId && renameThread) {
+      renameThread(convId, titleDraft.trim());
     }
     setIsEditingTitle(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const userMessage = input.trim();
     if (!userMessage) return;
@@ -106,7 +123,7 @@ export default function ChatInterface({
     submitMessage(userMessage);
   };
 
-  const handleSuggestedPrompt = (prompt) => {
+  const handleSuggestedPrompt = (prompt: string) => {
     submitMessage(prompt);
   };
 
@@ -159,8 +176,8 @@ export default function ChatInterface({
               className="category-dropdown"
               value={currentCategory}
               onChange={(e) => {
-                if (activeConversation?.id && updateCategory) {
-                  updateCategory(activeConversation.id, e.target.value);
+                if (convId && updateCategory) {
+                  updateCategory(convId, e.target.value);
                 }
               }}
               title="Switch Coaching Focus Area"
@@ -199,7 +216,7 @@ export default function ChatInterface({
             {devMemoriesState.preferredLanguage && (
               <span className="glance-tag stack">⚡ {devMemoriesState.preferredLanguage}</span>
             )}
-            {devMemoriesState.memories.slice(0, 2).map((m, idx) => (
+            {devMemoriesState.memories.slice(0, 2).map((m: any, idx: number) => (
               <span key={idx} className="glance-tag note">
                 {m.text.length > 35 ? `${m.text.slice(0, 35)}...` : m.text}
               </span>
@@ -270,7 +287,7 @@ export default function ChatInterface({
           <input
             type="text"
             className="input-field"
-            ref={inputRef}
+            ref={inputRef as RefObject<HTMLInputElement>}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Ask DevPulse anything about ${CATEGORY_OPTIONS.find(c => c.id === currentCategory)?.label.split(' ')[1] || 'coding'}...`}

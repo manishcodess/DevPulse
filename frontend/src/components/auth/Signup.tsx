@@ -1,27 +1,34 @@
-import React, { useState } from 'react';
-import { Zap, Mail, Lock, ArrowRight } from 'lucide-react';
+import React, { useState, ChangeEvent, FormEvent } from 'react';
+import { Zap, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import { apiFetch } from '../../utils/api';
+import { UserCredentials } from '../../types';
 
-export default function Login({ onLogin, onSwitchToSignup }) {
+interface SignupProps {
+  onSignup: (user: UserCredentials) => void;
+  onSwitchToLogin: () => void;
+}
+
+export default function Signup({ onSignup, onSwitchToLogin }: SignupProps) {
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
 
     try {
-      const response = await apiFetch(`${API_BASE_URL}/auth/login`, {
+      const response = await apiFetch(`${API_BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -29,10 +36,9 @@ export default function Login({ onLogin, onSwitchToSignup }) {
       });
       
       const data = await response.json();
-      
-      onLogin(data.user);
-    } catch (err) {
-      setError(err.message);
+      onSignup(data.user);
+    } catch (err: any) {
+      setError(err.message || 'Signup failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -45,8 +51,8 @@ export default function Login({ onLogin, onSwitchToSignup }) {
           <div className="auth-logo-bg">
             <Zap size={22} color="#ffffff" />
           </div>
-          <h1 className="auth-title">Welcome Back</h1>
-          <p className="auth-subtitle">Log in to continue to DevPulse.</p>
+          <h1 className="auth-title">Create an Account</h1>
+          <p className="auth-subtitle">Join DevPulse to level up your developer journey.</p>
         </div>
 
         {error && (
@@ -56,6 +62,19 @@ export default function Login({ onLogin, onSwitchToSignup }) {
         )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          <div className="input-group">
+            <User className="input-icon" size={18} />
+            <input 
+              type="text" 
+              name="name"
+              placeholder="Full Name" 
+              className="auth-input"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
           <div className="input-group">
             <Mail className="input-icon" size={18} />
             <input 
@@ -92,7 +111,7 @@ export default function Login({ onLogin, onSwitchToSignup }) {
               <div className="auth-spinner"></div>
             ) : (
               <>
-                Log In
+                Create Account
                 <ArrowRight size={18} className="btn-icon" />
               </>
             )}
@@ -100,7 +119,7 @@ export default function Login({ onLogin, onSwitchToSignup }) {
         </form>
         
         <p className="auth-footer">
-          Don't have an account? <span className="auth-link" onClick={onSwitchToSignup}>Sign up</span>
+          Already have an account? <span className="auth-link" onClick={onSwitchToLogin}>Log in</span>
         </p>
       </div>
     </div>

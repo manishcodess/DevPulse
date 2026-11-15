@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, DragEvent, ChangeEvent, RefObject } from 'react';
 import { 
   FileText, 
   Target, 
@@ -17,6 +17,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { parseResumeAnalysis } from '../../utils/resumeParser';
+import { UserCredentials } from '../../types';
 
 const PRESET_ROLES = [
   "Backend Engineer at Stripe",
@@ -26,7 +27,7 @@ const PRESET_ROLES = [
   "AI & LLM Backend Engineer (Python / FastAPI)"
 ];
 
-const formatText = (text) => {
+const formatText = (text: string | null | undefined) => {
   if (!text) return text;
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, i) => {
@@ -36,6 +37,22 @@ const formatText = (text) => {
     return part;
   });
 };
+
+interface ResumeReviewProps {
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  handleResumeUpload: (e: ChangeEvent<HTMLInputElement>) => void;
+  handleFileChange: (file: File | null) => void;
+  clearSelectedFile: () => void;
+  selectedFile: File | null;
+  jobDescription: string;
+  setJobDescription: (val: string) => void;
+  analysisMode: 'jd_match' | 'general';
+  setAnalysisMode: (mode: 'jd_match' | 'general') => void;
+  runAnalysis: (customJD?: string | null) => Promise<void>;
+  resumeLoading: boolean;
+  resumeAnalysis: any;
+  userCredentials?: UserCredentials | null;
+}
 
 export default function ResumeReview({
   fileInputRef,
@@ -49,10 +66,9 @@ export default function ResumeReview({
   setAnalysisMode,
   runAnalysis,
   resumeLoading,
-  resumeAnalysis,
-  userCredentials
-}) {
-  const [copiedIndex, setCopiedIndex] = useState(null);
+  resumeAnalysis
+}: ResumeReviewProps) {
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Memoize the parsing logic so it only recalculates when resumeAnalysis changes
@@ -60,23 +76,23 @@ export default function ResumeReview({
     return parseResumeAnalysis(resumeAnalysis);
   }, [resumeAnalysis]);
 
-  const handleCopyBullet = (text, index) => {
+  const handleCopyBullet = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -91,19 +107,19 @@ export default function ResumeReview({
       scoreColor,
       matchTier,
       targetRole,
-      matchingSkills,
-      missingSkills,
-      strengths,
-      weaknesses,
-      starBulletImprovements,
-      atsRecommendations,
+      matchingSkills = [],
+      missingSkills = [],
+      strengths = [],
+      weaknesses = [],
+      starBulletImprovements = [],
+      atsRecommendations = [],
       verdict
     } = parsedAnalysis;
 
     return (
       <div className="ats-results-container">
         {/* Score & Verdict Hero Card */}
-        <div className="ats-hero-card" style={{ '--score-color': scoreColor }}>
+        <div className="ats-hero-card" style={{ '--score-color': scoreColor } as React.CSSProperties}>
           <div className="ats-score-badge-group">
             <div className="ats-radial-gauge" style={{ borderColor: scoreColor }}>
               <span className="ats-radial-score" style={{ color: scoreColor }}>{score}%</span>
@@ -282,7 +298,7 @@ export default function ResumeReview({
 
   const renderGeneralAnalysis = () => {
     if (!parsedAnalysis) return null;
-    const { score, scoreColor, strongPoints, weakPoints, keywords, verdict } = parsedAnalysis;
+    const { score, scoreColor, strongPoints = [], weakPoints = [], keywords = [], verdict } = parsedAnalysis;
 
     return (
       <div className="resume-analysis-container">
@@ -375,7 +391,7 @@ export default function ResumeReview({
               type="file" 
               accept=".pdf,.txt" 
               hidden 
-              ref={fileInputRef} 
+              ref={fileInputRef as RefObject<HTMLInputElement>} 
               onChange={handleResumeUpload} 
             />
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
 import { streamAIChat } from '../services/aiService';
 import {
   fetchConversations,
@@ -7,23 +7,40 @@ import {
   updateConversation,
   deleteConversation
 } from '../services/conversationService';
+import { ToastFn, UserCredentials, GithubData, LeetcodeData } from '../types';
 
-export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, briefLoading, showToast) {
-  const [conversations, setConversations] = useState([]);
-  const [activeConversationId, setActiveConversationId] = useState(null);
-  const [activeConversation, setActiveConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [conversationsLoading, setConversationsLoading] = useState(false);
+export interface ChatMsg {
+  role: 'user' | 'ai' | 'assistant' | 'system';
+  content: string;
+  timestamp?: string;
+  isDailyBrief?: boolean;
+}
 
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
+export function useChat(
+  githubData?: GithubData | null,
+  leetcodeData?: LeetcodeData | null,
+  userCredentials?: UserCredentials | null,
+  dailyBrief?: string,
+  briefLoading?: boolean,
+  showToast?: ToastFn
+) {
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeConversation, setActiveConversation] = useState<any | null>(null);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState<boolean>(false);
 
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const [input, setInput] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+  const getConvId = (conv: any): string => conv?.id || conv?._id || '';
 
   // ─── 1. Load Conversations List ─────────────────────────────────────────────
-  const loadConversations = useCallback(async (selectId = null) => {
+  const loadConversations = useCallback(async (selectId: string | null = null) => {
     if (!userCredentials?.id && !userCredentials?._id && !userCredentials?.name) return;
     setConversationsLoading(true);
     try {
@@ -32,7 +49,7 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
 
       if (list.length > 0) {
         // Pick requested ID, or current active ID, or the first conversation
-        const targetId = selectId || (activeConversationId && list.some(c => c.id === activeConversationId) ? activeConversationId : list[0].id);
+        const targetId = selectId || (activeConversationId && list.some(c => getConvId(c) === activeConversationId) ? activeConversationId : getConvId(list[0]));
         setActiveConversationId(targetId);
       } else {
         // Create initial default conversation
@@ -42,12 +59,12 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
         });
         if (initial) {
           setConversations([initial]);
-          setActiveConversationId(initial.id);
+          setActiveConversationId(getConvId(initial));
           setActiveConversation(initial);
-          setMessages(initial.messages || []);
+          setMessages((initial.messages as any) || []);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Could not load conversations:', err.message);
     } finally {
       setConversationsLoading(false);
@@ -68,9 +85,9 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
         const fullConv = await fetchConversation(activeConversationId);
         if (isMounted && fullConv) {
           setActiveConversation(fullConv);
-          setMessages(fullConv.messages || []);
+          setMessages((fullConv.messages as any) || []);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn(`Failed to load conversation ${activeConversationId}:`, err.message);
       }
     })();
@@ -93,8 +110,8 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
     }
   }, [dailyBrief, activeConversationId]);
 
-  const scrollToBottom = (activeTab) => {
-    if (activeTab === 'chat') {
+  const scrollToBottom = (activeTab?: string) => {
+    if (activeTab === 'chat' || !activeTab) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   };
@@ -104,98 +121,99 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
     try {
       const newConv = await createConversation({ title, category });
       if (newConv) {
+        const newId = getConvId(newConv);
         setConversations(prev => [newConv, ...prev]);
-        setActiveConversationId(newConv.id);
+        setActiveConversationId(newId);
         setActiveConversation(newConv);
-        setMessages(newConv.messages || []);
+        setMessages((newConv.messages as any) || []);
         if (showToast) showToast(`Started new thread: "${newConv.title}"`, 'success');
         setTimeout(() => inputRef.current?.focus(), 50);
         return newConv;
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create new conversation:', err);
       if (showToast) showToast(err.message || 'Failed to create chat', 'error');
     }
   };
 
-  const selectThread = (convId) => {
+  const selectThread = (convId: string) => {
     if (convId === activeConversationId || isLoading || isStreaming) return;
     setActiveConversationId(convId);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  const renameThread = async (convId, newTitle) => {
+  const renameThread = async (convId: string, newTitle: string) => {
     if (!newTitle.trim()) return;
     try {
       const updated = await updateConversation(convId, { title: newTitle.trim() });
       if (updated) {
-        setConversations(prev => prev.map(c => c.id === convId ? { ...c, title: updated.title } : c));
+        setConversations(prev => prev.map(c => getConvId(c) === convId ? { ...c, title: updated.title } : c));
         if (activeConversationId === convId) {
-          setActiveConversation(prev => prev ? { ...prev, title: updated.title } : prev);
+          setActiveConversation((prev: any) => prev ? { ...prev, title: updated.title } : prev);
         }
         if (showToast) showToast('Thread renamed!', 'success');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to rename thread:', err);
       if (showToast) showToast(err.message || 'Failed to rename thread', 'error');
     }
   };
 
-  const togglePinThread = async (convId, currentPinned) => {
+  const togglePinThread = async (convId: string, currentPinned: boolean) => {
     try {
       const updated = await updateConversation(convId, { pinned: !currentPinned });
       if (updated) {
         setConversations(prev => {
-          const list = prev.map(c => c.id === convId ? { ...c, pinned: updated.pinned } : c);
+          const list = prev.map(c => getConvId(c) === convId ? { ...c, pinned: updated.pinned } : c);
           return list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
         });
         if (activeConversationId === convId) {
-          setActiveConversation(prev => prev ? { ...prev, pinned: updated.pinned } : prev);
+          setActiveConversation((prev: any) => prev ? { ...prev, pinned: updated.pinned } : prev);
         }
         if (showToast) showToast(updated.pinned ? 'Thread pinned to top!' : 'Thread unpinned', 'info');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to pin thread:', err);
     }
   };
 
-  const deleteThread = async (convId) => {
+  const deleteThread = async (convId: string) => {
     try {
       await deleteConversation(convId);
-      const remaining = conversations.filter(c => c.id !== convId);
+      const remaining = conversations.filter(c => getConvId(c) !== convId);
       setConversations(remaining);
 
       if (activeConversationId === convId) {
         if (remaining.length > 0) {
-          setActiveConversationId(remaining[0].id);
+          setActiveConversationId(getConvId(remaining[0]));
         } else {
           // If no threads remain, create a fresh one
           await createNewThread('New Coaching Session', 'general');
         }
       }
       if (showToast) showToast('Thread deleted', 'info');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to delete thread:', err);
       if (showToast) showToast(err.message || 'Failed to delete thread', 'error');
     }
   };
 
-  const updateCategory = async (convId, category) => {
+  const updateCategory = async (convId: string, category: string) => {
     try {
       const updated = await updateConversation(convId, { category });
       if (updated) {
-        setConversations(prev => prev.map(c => c.id === convId ? { ...c, category: updated.category } : c));
+        setConversations(prev => prev.map(c => getConvId(c) === convId ? { ...c, category: updated.category } : c));
         if (activeConversationId === convId) {
-          setActiveConversation(prev => prev ? { ...prev, category: updated.category } : prev);
+          setActiveConversation((prev: any) => prev ? { ...prev, category: updated.category } : prev);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update category:', err);
     }
   };
 
   // ─── 5. Submit Message (Streaming & Auto Persistence) ──────────────────────
-  const submitMessage = async (userMessage) => {
+  const submitMessage = async (userMessage: string) => {
     if (!userMessage.trim() || isLoading || isStreaming) return;
 
     let targetConvId = activeConversationId;
@@ -203,11 +221,11 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
     // If somehow no active conversation exists, create one first
     if (!targetConvId) {
       const created = await createNewThread('New Coaching Session', 'general');
-      if (created) targetConvId = created.id;
+      if (created) targetConvId = getConvId(created);
     }
 
     const userTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const updatedMessages = [...messages, { role: 'user', content: userMessage, timestamp: userTime }];
+    const updatedMessages: ChatMsg[] = [...messages, { role: 'user', content: userMessage, timestamp: userTime }];
     setMessages(updatedMessages);
     setIsLoading(true);
 
@@ -221,9 +239,10 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
         }));
 
       const activeCat = activeConversation?.category || 'general';
-      const response = await streamAIChat(history, targetConvId, activeCat);
+      const stream = await streamAIChat(history, targetConvId, activeCat);
+      if (!stream) throw new Error('No response stream returned from server');
 
-      const reader = response.getReader();
+      const reader = stream.getReader();
       const decoder = new TextDecoder('utf-8');
 
       let fullText = '';
@@ -254,7 +273,7 @@ export function useChat(githubData, leetcodeData, userCredentials, dailyBrief, b
         }).catch(() => {});
       }, 2500);
 
-    } catch (error) {
+    } catch (error: any) {
       setMessages(prev => [
         ...prev,
         { role: 'ai', content: `Connection error: ${error.message}` },

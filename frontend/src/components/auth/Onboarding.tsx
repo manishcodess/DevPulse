@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Code2, User, ArrowRight, Save, MessageSquare, FileText } from 'lucide-react';
 import { generateAIContent } from '../../services/aiService';
 import { readFileAsBase64, readFileAsText } from '../../utils/file';
@@ -6,29 +6,35 @@ import { extractUsername } from '../../utils/username';
 import { buildResumePrompt } from '../../utils/prompts';
 import { API_BASE_URL } from '../../config';
 import { apiFetch } from '../../utils/api';
+import { UserCredentials } from '../../types';
 
-export default function Onboarding({ onComplete, onSkip }) {
+interface OnboardingProps {
+  onComplete: (user: UserCredentials) => void;
+  onSkip: () => void;
+}
+
+export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
   const [formData, setFormData] = useState({
     github: '',
     leetcode: '',
     bio: ''
   });
-  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingText, setLoadingText] = useState("");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setLoadingText("Saving profile...");
     setError(null);
 
-    let generatedResumeContext = undefined;
+    let generatedResumeContext: string | undefined = undefined;
 
     try {
       if (resumeFile) {
@@ -38,7 +44,7 @@ export default function Onboarding({ onComplete, onSkip }) {
           : '';
         const promptText = buildResumePrompt(textContent);
         
-        const parts = [{ text: promptText }];
+        const parts: any[] = [{ text: promptText }];
         if (resumeFile.type === "application/pdf") {
           const pdfBase64 = await readFileAsBase64(resumeFile);
           parts.unshift({
@@ -69,9 +75,8 @@ export default function Onboarding({ onComplete, onSkip }) {
       });
 
       const data = await response.json();
-
       onComplete(data.user);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setError(err.message || "Something went wrong during onboarding.");
     } finally {
@@ -141,7 +146,7 @@ export default function Onboarding({ onComplete, onSkip }) {
             <input 
               type="file" 
               accept=".pdf,.txt"
-              onChange={(e) => setResumeFile(e.target.files[0])}
+              onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
               style={{ 
                 position: 'absolute',
                 top: 0,
@@ -169,44 +174,44 @@ export default function Onboarding({ onComplete, onSkip }) {
             </div>
           </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-              <button 
-                type="submit" 
-                className={`auth-submit-btn ${isSubmitting ? 'loading' : ''}`} 
-                disabled={isSubmitting}
-                style={{ flex: '1' }}
-              >
-                {isSubmitting ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="auth-spinner"></div>
-                    <span style={{ fontSize: '14px' }}>{loadingText}</span>
-                  </div>
-                ) : (
-                  <>
-                    Save & Continue
-                    <ArrowRight size={18} className="btn-icon" />
-                  </>
-                )}
-              </button>
-              <button 
-                type="button" 
-                onClick={onSkip}
-                style={{
-                  background: 'var(--surface-1)',
-                  color: 'var(--text-muted)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '10px',
-                  padding: '12px 16px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  flex: '0.8',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.15s ease, color 0.15s ease'
-                }}
-              >
-                Skip for now
-              </button>
-            </div>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+            <button 
+              type="submit" 
+              className={`auth-submit-btn ${isSubmitting ? 'loading' : ''}`} 
+              disabled={isSubmitting}
+              style={{ flex: '1' }}
+            >
+              {isSubmitting ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="auth-spinner"></div>
+                  <span style={{ fontSize: '14px' }}>{loadingText}</span>
+                </div>
+              ) : (
+                <>
+                  Save & Continue
+                  <ArrowRight size={18} className="btn-icon" />
+                </>
+              )}
+            </button>
+            <button 
+              type="button" 
+              onClick={onSkip}
+              style={{
+                background: 'var(--surface-1)',
+                color: 'var(--text-muted)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                flex: '0.8',
+                cursor: 'pointer',
+                transition: 'background-color 0.15s ease, color 0.15s ease'
+              }}
+            >
+              Skip for now
+            </button>
+          </div>
         </form>
       </div>
     </div>

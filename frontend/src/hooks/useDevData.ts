@@ -3,25 +3,23 @@ import { fetchDailyBrief } from '../services/aiService';
 import { getCachedData, setCachedData } from '../utils/storage';
 import { API_BASE_URL } from '../config';
 import { apiFetch } from '../utils/api';
+import { GithubData, LeetcodeData, ToastFn, UserCredentials } from '../types';
 
-// useDevData fetches GitHub and LeetCode stats for the logged-in user,
-// then uses that data to generate a personalized AI daily brief.
-// It re-runs every time userCredentials changes (e.g. after login).
-export function useDevData(showToast, userCredentials = null) {
-  const [githubData, setGithubData]   = useState(null);
-  const [leetcodeData, setLeetcodeData] = useState(null);
-  const [dailyBrief, setDailyBrief]   = useState('');
-  const [briefLoading, setBriefLoading] = useState(true);
+export function useDevData(showToast: ToastFn = () => {}, userCredentials: UserCredentials | null = null) {
+  const [githubData, setGithubData]   = useState<GithubData | null>(null);
+  const [leetcodeData, setLeetcodeData] = useState<LeetcodeData | any | null>(null);
+  const [dailyBrief, setDailyBrief]   = useState<string>('');
+  const [briefLoading, setBriefLoading] = useState<boolean>(true);
 
-  const fetchGithubData = async (forceFresh = false) => {
+  const fetchGithubData = async (forceFresh = false): Promise<GithubData | null> => {
     const username = userCredentials?.github;
     if (!username) return null;
 
     const cacheKey = `devpulse-github-${username}`;
     if (forceFresh) {
-      try { localStorage.removeItem(cacheKey); } catch (e) {}
+      try { localStorage.removeItem(cacheKey); } catch {}
     } else {
-      const cached = getCachedData(cacheKey);
+      const cached = getCachedData<GithubData>(cacheKey);
       if (cached) {
         setGithubData(cached);
         showToast('GitHub data loaded from cache ✓');
@@ -39,23 +37,23 @@ export function useDevData(showToast, userCredentials = null) {
       setGithubData(data);
       showToast(forceFresh ? 'GitHub data refreshed ✓' : 'GitHub data loaded !');
       return data;
-    } catch (err) {
+    } catch (err: any) {
       showToast(`Could not load GitHub data: ${err.message}`, 'error');
-      const fallback = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
+      const fallback: GithubData = { error: true, totalCommits: '--', publicRepos: '--', streak: 0, languages: [] };
       setGithubData(fallback);
       return fallback;
     }
   };
 
-  const fetchLeetcodeData = async (forceFresh = false) => {
+  const fetchLeetcodeData = async (forceFresh = false): Promise<any> => {
     const username = userCredentials?.leetcode;
     if (!username) return null;
 
     const cacheKey = `devpulse-leetcode-${username}`;
     if (forceFresh) {
-      try { localStorage.removeItem(cacheKey); } catch (e) {}
+      try { localStorage.removeItem(cacheKey); } catch {}
     } else {
-      const cached = getCachedData(cacheKey);
+      const cached = getCachedData<any>(cacheKey);
       if (cached) {
         setLeetcodeData(cached);
         showToast('LeetCode data loaded from cache ✓');
@@ -86,7 +84,7 @@ export function useDevData(showToast, userCredentials = null) {
       setLeetcodeData(formatted);
       showToast(forceFresh ? 'LeetCode data refreshed ✓' : 'LeetCode data loaded ✓');
       return formatted;
-    } catch (err) {
+    } catch (err: any) {
       showToast(`Could not load LeetCode data: ${err.message}`, 'error');
       const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
       setLeetcodeData(fallback);

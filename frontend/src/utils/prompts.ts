@@ -1,10 +1,10 @@
 /**
  * Builds the resume analysis prompt for the AI.
  * Used by both the Onboarding flow and the Resume Review feature.
- * @param {string} textContent - Extracted text from the resume (empty if PDF is attached separately)
- * @returns {string} The formatted prompt string
+ * @param textContent - Extracted text from the resume (empty if PDF is attached separately)
+ * @returns The formatted prompt string
  */
-export const buildResumePrompt = (textContent = '') => {
+export const buildResumePrompt = (textContent = ''): string => {
   return `You are DevPulse, a super smart study buddy and experienced tech mentor who knows hiring standards inside out.
 Review the provided Software Engineering resume with kindness, honesty, and sharp practical insight. Focus on education, experience, impact, and projects.
 

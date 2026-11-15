@@ -1,11 +1,12 @@
 import { API_BASE_URL } from '../config';
 import { apiFetch } from '../utils/api';
+import { StructuredResumeMatch } from '../types';
 
 // ─── generateAIContent ────────────────────────────────────────────────────────
 // Sends a prompt to the backend and gets back a full text response (not streamed).
 // Used for: Daily Brief, Resume Analysis
 // `contents` can be a plain string or an array of content parts (for PDFs)
-export async function generateAIContent(contents) {
+export async function generateAIContent(contents: any): Promise<string> {
   const response = await apiFetch(`${API_BASE_URL}/ai/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -23,7 +24,7 @@ export async function generateAIContent(contents) {
   return data.text;
 }
 
-export async function fetchDailyBrief(forceFresh = false) {
+export async function fetchDailyBrief(forceFresh = false): Promise<string> {
   const url = forceFresh ? `${API_BASE_URL}/ai/daily-brief?fresh=true` : `${API_BASE_URL}/ai/daily-brief`;
   const response = await apiFetch(url, {
     method: 'GET',
@@ -35,7 +36,11 @@ export async function fetchDailyBrief(forceFresh = false) {
   return data.text;
 }
 
-export async function streamAIChat(messageHistory, conversationId = null, activeCategory = 'general') {
+export async function streamAIChat(
+  messageHistory: any[],
+  conversationId: string | null = null,
+  activeCategory = 'general'
+): Promise<ReadableStream<Uint8Array> | null> {
   const response = await apiFetch(`${API_BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -49,7 +54,11 @@ export async function streamAIChat(messageHistory, conversationId = null, active
   return response.body; // ReadableStream — the caller reads chunks from this
 }
 
-export async function matchResumeWithJD(contents, jobDescription, textContent = '') {
+export async function matchResumeWithJD(
+  contents: any,
+  jobDescription: string,
+  textContent = ''
+): Promise<StructuredResumeMatch> {
   const response = await apiFetch(`${API_BASE_URL}/ai/resume-match`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

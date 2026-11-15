@@ -1,26 +1,31 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, ChangeEvent } from 'react';
 import { generateAIContent, matchResumeWithJD } from '../services/aiService';
 import { readFileAsBase64, readFileAsText } from '../utils/file';
 import { buildResumePrompt } from '../utils/prompts';
 import { API_BASE_URL } from '../config';
 import { apiFetch } from '../utils/api';
+import { ToastFn, UserCredentials } from '../types';
 
-export function useResume(showToast, userCredentials, setUserCredentials) {
-  const [resumeAnalysis, setResumeAnalysis] = useState(null);
-  const [resumeLoading, setResumeLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [jobDescription, setJobDescription] = useState('Backend Engineer at Stripe');
-  const [analysisMode, setAnalysisMode] = useState('jd_match'); // 'jd_match' | 'general'
-  const fileInputRef = useRef(null);
+export function useResume(
+  showToast: ToastFn = () => {},
+  userCredentials: (UserCredentials & { resumeContext?: any }) | null = null,
+  setUserCredentials: (user: any) => void = () => {}
+) {
+  const [resumeAnalysis, setResumeAnalysis] = useState<any>(null);
+  const [resumeLoading, setResumeLoading] = useState<boolean>(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [jobDescription, setJobDescription] = useState<string>('Backend Engineer at Stripe');
+  const [analysisMode, setAnalysisMode] = useState<'jd_match' | 'general'>('jd_match');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleFileChange = (file) => {
+  const handleFileChange = (file: File | null) => {
     if (!file) return;
     setSelectedFile(file);
     showToast(`Loaded: ${file.name}`, 'info');
   };
 
-  const handleResumeUpload = (e) => {
-    const file = e.target.files[0];
+  const handleResumeUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     handleFileChange(file);
   };
@@ -32,7 +37,7 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
     }
   };
 
-  const runAnalysis = async (customJD = null) => {
+  const runAnalysis = async (customJD: string | null = null) => {
     const activeJD = (customJD !== null ? customJD : jobDescription).trim();
 
     if (!selectedFile && !userCredentials?.resumeContext) {
@@ -51,7 +56,7 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
 
     try {
       let textContent = '';
-      let pdfBase64 = null;
+      let pdfBase64: string | null = null;
 
       if (selectedFile) {
         if (selectedFile.type === 'application/pdf') {
@@ -62,7 +67,7 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
       }
 
       if (analysisMode === 'jd_match') {
-        const parts = [];
+        const parts: any[] = [];
         if (pdfBase64) {
           parts.push({
             inlineData: {
@@ -87,14 +92,14 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
             if (meData.user) {
               setUserCredentials(meData.user);
             }
-          } catch (e) {
+          } catch (e: any) {
             console.warn('Could not refresh user context after resume match:', e.message);
           }
         }
       } else {
         // Classic General Health Check
         const promptText = buildResumePrompt(textContent);
-        const parts = [{ text: promptText }];
+        const parts: any[] = [{ text: promptText }];
         if (pdfBase64) {
           parts.unshift({
             inlineData: {
@@ -121,12 +126,12 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
             if (data.success) {
               setUserCredentials(data.user);
             }
-          } catch (err) {
+          } catch (err: any) {
             console.error('Failed to save resume context', err.message);
           }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Resume Analysis Error:', err);
       showToast(`Analysis failed: ${err.message}`, 'error');
     } finally {
@@ -149,4 +154,3 @@ export function useResume(showToast, userCredentials, setUserCredentials) {
     runAnalysis
   };
 }
-

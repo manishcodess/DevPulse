@@ -1,16 +1,18 @@
-export const getScoreColor = (score, max = 100) => {
+import { ParsedResumeResult } from '../types';
+
+export const getScoreColor = (score: number, max = 100): string => {
   const percentage = max === 10 ? score * 10 : score;
   if (percentage >= 80) return '#22c55e'; // Green
   if (percentage >= 60) return '#f59e0b'; // Amber
   return '#ef4444'; // Red
 };
 
-export const parseResumeAnalysis = (analysisInput) => {
+export const parseResumeAnalysis = (analysisInput: any): ParsedResumeResult | null => {
   if (!analysisInput) return null;
 
   // 1. If it's already a structured JSON Object from JD match endpoint
   if (typeof analysisInput === 'object' && analysisInput.matchScore !== undefined) {
-    const score = analysisInput.matchScore;
+    const score = Number(analysisInput.matchScore) || 0;
     const scoreColor = getScoreColor(score, 100);
     return {
       isStructuredMatch: true,
@@ -43,7 +45,7 @@ export const parseResumeAnalysis = (analysisInput) => {
   // 3. Fallback: Parse string formatted output (classic general audit)
   const analysisText = typeof analysisInput === 'string' ? analysisInput : '';
   const scoreMatch = analysisText.match(/SCORE:\s*(\d+)/i);
-  const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
+  const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
   const scoreColor = score > 7 ? '#22c55e' : score >= 5 ? '#f59e0b' : '#ef4444';
 
   const strongMatch = analysisText.match(/STRONG POINTS[^\n]*\n([\s\S]*?)(?=WEAK POINTS)/i);
@@ -61,7 +63,7 @@ export const parseResumeAnalysis = (analysisInput) => {
     : [];
 
   const verdictMatch = analysisText.match(/ONE LINE VERDICT:?\s*([^\n]*)/i);
-  const verdict = verdictMatch ? verdictMatch[1] : "";
+  const verdict = verdictMatch ? verdictMatch[1].trim() : "";
 
   return {
     isStructuredMatch: false,
@@ -73,4 +75,3 @@ export const parseResumeAnalysis = (analysisInput) => {
     verdict
   };
 };
-

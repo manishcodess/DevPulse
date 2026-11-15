@@ -1,30 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, FormEvent, MouseEvent } from 'react';
 import {
   Zap,
   ExternalLink,
   Menu,
   Edit2,
-  Code,
   Trash2,
   Plus,
   MessageSquare,
   Brain,
   Activity,
   Pin,
-  Check,
   X,
-  Target,
   Sparkles,
-  Search,
-  Briefcase,
-  Flame,
-  ChevronRight
+  Search
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import { extractUsername } from '../../utils/username';
 import { apiFetch } from '../../utils/api';
+import { GithubData, LeetcodeData, UserCredentials, DevMemory, ToastFn } from '../../types';
 
-const CATEGORY_COLORS = {
+const CATEGORY_COLORS: Record<string, { label: string; bg: string; text: string; border: string }> = {
   general: { label: 'General', bg: 'rgba(59, 130, 246, 0.15)', text: '#60a5fa', border: 'rgba(59, 130, 246, 0.3)' },
   system_design: { label: 'System Design', bg: 'rgba(168, 85, 247, 0.15)', text: '#c084fc', border: 'rgba(168, 85, 247, 0.3)' },
   dsa: { label: 'DSA Prep', bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24', border: 'rgba(245, 158, 11, 0.3)' },
@@ -42,16 +37,33 @@ const MEMORY_CATEGORIES = [
   { id: 'general', label: '📝 Note', color: '#9ca3af' },
 ];
 
+interface LeftPanelProps {
+  isPanelOpen: boolean;
+  setIsPanelOpen: (val: boolean) => void;
+  githubData?: GithubData | any;
+  leetcodeData?: LeetcodeData | any;
+  userCredentials?: UserCredentials | any;
+  logout?: () => void;
+  setUserCredentials: React.Dispatch<React.SetStateAction<any>>;
+  showToast?: ToastFn;
+  conversations?: any[];
+  activeConversationId?: string | null;
+  selectThread?: (id: string) => void;
+  createNewThread?: (title?: string, category?: string) => Promise<any>;
+  renameThread?: (id: string, newTitle: string) => Promise<void>;
+  togglePinThread?: (id: string, currentPinned: boolean) => Promise<void>;
+  deleteThread?: (id: string) => Promise<void>;
+  devMemoriesState?: any;
+}
+
 export default function LeftPanel({
   isPanelOpen,
   setIsPanelOpen,
   githubData,
   leetcodeData,
   userCredentials,
-  logout,
   setUserCredentials,
   showToast,
-  // Multi-Thread Chat props
   conversations = [],
   activeConversationId,
   selectThread,
@@ -59,10 +71,9 @@ export default function LeftPanel({
   renameThread,
   togglePinThread,
   deleteThread,
-  // Developer Memory props
   devMemoriesState = {}
-}) {
-  const [activeTab, setActiveTab] = useState('threads'); // 'threads' | 'telemetry' | 'memory'
+}: LeftPanelProps) {
+  const [activeTab, setActiveTab] = useState<'threads' | 'telemetry' | 'memory'>('threads');
 
   // GitHub & LeetCode connection states
   const [githubInput, setGithubInput] = useState('');
@@ -74,7 +85,7 @@ export default function LeftPanel({
 
   // Thread search & rename state
   const [threadSearch, setThreadSearch] = useState('');
-  const [editingThreadId, setEditingThreadId] = useState(null);
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
 
   // Memory creation states
@@ -94,8 +105,8 @@ export default function LeftPanel({
   } = devMemoriesState;
 
   // ─── Connection Handlers ──────────────────────────────────────────────────
-  const connectService = async (type) => {
-    const body = {};
+  const connectService = async (type: 'github' | 'leetcode') => {
+    const body: Record<string, string> = {};
     if (type === 'github') body.githubUsername = extractUsername(githubInput);
     else if (type === 'leetcode') body.leetcodeUsername = extractUsername(leetcodeInput);
     try {
@@ -108,7 +119,7 @@ export default function LeftPanel({
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      setUserCredentials(prev => ({ ...prev, ...data.user }));
+      setUserCredentials((prev: any) => ({ ...prev, ...data.user }));
       if (type === 'github') {
         setGithubInput('');
         setEditingGithub(false);
@@ -120,19 +131,19 @@ export default function LeftPanel({
       if (showToast) {
         showToast(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile linked successfully!`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       if (showToast) showToast(err.message, 'error');
     }
   };
 
-  const clearProfile = async (type) => {
+  const clearProfile = async (type: 'github' | 'leetcode') => {
     const oldUsername = type === 'github' ? (githubData?.username || userCredentials?.github) : (leetcodeData?.username || userCredentials?.leetcode);
     if (type === 'github') setGithubConnecting(true);
     if (type === 'leetcode') setLeetcodeConnecting(true);
 
     try {
-      const body = {};
+      const body: Record<string, string> = {};
       if (type === 'github') body.githubUsername = '';
       else if (type === 'leetcode') body.leetcodeUsername = '';
 
@@ -146,10 +157,10 @@ export default function LeftPanel({
       if (data.error) throw new Error(data.error);
 
       if (oldUsername) {
-        try { localStorage.removeItem(`devpulse-${type}-${oldUsername}`); } catch (e) {}
+        try { localStorage.removeItem(`devpulse-${type}-${oldUsername}`); } catch {}
       }
 
-      setUserCredentials(prev => ({ 
+      setUserCredentials((prev: any) => ({ 
         ...prev, 
         ...(data.user || (type === 'github' ? { github: '', githubUsername: '' } : { leetcode: '', leetcodeUsername: '' }))
       }));
@@ -160,7 +171,7 @@ export default function LeftPanel({
       if (showToast) {
         showToast(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile cleared. Ready for fresh connection!`, 'info');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Failed to clear ${type} profile:`, err);
       if (showToast) showToast(err.message || `Failed to clear ${type} profile`, 'error');
     } finally {
@@ -170,21 +181,21 @@ export default function LeftPanel({
   };
 
   // ─── Thread Rename Handlers ───────────────────────────────────────────────
-  const startEditingThread = (e, thread) => {
+  const startEditingThread = (e: MouseEvent, thread: any) => {
     e.stopPropagation();
-    setEditingThreadId(thread.id);
+    setEditingThreadId(thread.id || thread._id);
     setEditingTitle(thread.title);
   };
 
-  const saveThreadTitle = (threadId) => {
-    if (editingTitle.trim()) {
+  const saveThreadTitle = (threadId: string) => {
+    if (editingTitle.trim() && renameThread) {
       renameThread(threadId, editingTitle.trim());
     }
     setEditingThreadId(null);
   };
 
   // ─── Memory Handlers ──────────────────────────────────────────────────────
-  const submitNewMemory = async (e) => {
+  const submitNewMemory = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMemoryText.trim() || !handleAddMemory) return;
     const ok = await handleAddMemory(newMemoryText, newMemoryCategory);
@@ -194,10 +205,10 @@ export default function LeftPanel({
     }
   };
 
-  const submitTargetInsights = async (e) => {
+  const submitTargetInsights = async (e: FormEvent) => {
     e.preventDefault();
     if (!handleUpdateInsights) return;
-    const companies = targetCompaniesInput.split(',').map(c => c.trim()).filter(Boolean);
+    const companies = targetCompaniesInput.split(',').map((c: string) => c.trim()).filter(Boolean);
     const ok = await handleUpdateInsights({
       targetRole: targetRoleInput,
       targetCompanies: companies,
@@ -206,10 +217,12 @@ export default function LeftPanel({
     if (ok) setEditingTargets(false);
   };
 
-  const filteredConversations = conversations.filter(c =>
-    c.title.toLowerCase().includes(threadSearch.toLowerCase()) ||
-    (c.category && c.category.toLowerCase().includes(threadSearch.toLowerCase()))
-  );
+  const filteredConversations = conversations.filter(c => {
+    const title = c.title || '';
+    const cat = c.category || '';
+    return title.toLowerCase().includes(threadSearch.toLowerCase()) ||
+      cat.toLowerCase().includes(threadSearch.toLowerCase());
+  });
 
   return (
     <aside className={`left-panel ${!isPanelOpen ? 'closed' : ''}`}>
@@ -299,13 +312,15 @@ export default function LeftPanel({
             <div className="threads-view-pane">
               {/* New Thread CTA */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <button
-                  onClick={() => createNewThread('New Coaching Session', 'general')}
-                  className="new-thread-btn"
-                >
-                  <Plus size={16} />
-                  <span>New Chat</span>
-                </button>
+                {createNewThread && (
+                  <button
+                    onClick={() => createNewThread('New Coaching Session', 'general')}
+                    className="new-thread-btn"
+                  >
+                    <Plus size={16} />
+                    <span>New Chat</span>
+                  </button>
+                )}
               </div>
 
               {/* Thread Search Box */}
@@ -333,39 +348,42 @@ export default function LeftPanel({
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                       {threadSearch ? 'No matching threads found.' : 'No chat sessions yet.'}
                     </p>
-                    <button
-                      onClick={() => createNewThread('New Coaching Session', 'general')}
-                      className="create-first-thread-btn"
-                    >
-                      Start First Chat
-                    </button>
+                    {createNewThread && (
+                      <button
+                        onClick={() => createNewThread('New Coaching Session', 'general')}
+                        className="create-first-thread-btn"
+                      >
+                        Start First Chat
+                      </button>
+                    )}
                   </div>
                 ) : (
                   filteredConversations.map((thread) => {
-                    const isActive = thread.id === activeConversationId;
+                    const threadId = thread.id || thread._id;
+                    const isActive = threadId === activeConversationId;
                     const catStyle = CATEGORY_COLORS[thread.category] || CATEGORY_COLORS.general;
 
                     return (
                       <div
-                        key={thread.id}
+                        key={threadId}
                         className={`thread-item-card ${isActive ? 'active' : ''} ${thread.pinned ? 'pinned' : ''}`}
-                        onClick={() => selectThread(thread.id)}
+                        onClick={() => selectThread && selectThread(threadId)}
                       >
                         <div className="thread-card-top">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
                             {thread.pinned && <Pin size={12} className="pinned-icon" />}
                             
-                            {editingThreadId === thread.id ? (
+                            {editingThreadId === threadId ? (
                               <input
                                 autoFocus
                                 className="inline-title-input"
                                 value={editingTitle}
                                 onChange={(e) => setEditingTitle(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') saveThreadTitle(thread.id);
+                                  if (e.key === 'Enter') saveThreadTitle(threadId);
                                   if (e.key === 'Escape') setEditingThreadId(null);
                                 }}
-                                onBlur={() => saveThreadTitle(thread.id)}
+                                onBlur={() => saveThreadTitle(threadId)}
                                 onClick={(e) => e.stopPropagation()}
                               />
                             ) : (
@@ -377,13 +395,15 @@ export default function LeftPanel({
 
                           {/* Action Buttons on Hover */}
                           <div className="thread-actions" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              className="thread-action-icon"
-                              onClick={() => togglePinThread(thread.id, thread.pinned)}
-                              title={thread.pinned ? "Unpin thread" : "Pin to top"}
-                            >
-                              <Pin size={12} style={{ color: thread.pinned ? '#f59e0b' : 'inherit' }} />
-                            </button>
+                            {togglePinThread && (
+                              <button
+                                className="thread-action-icon"
+                                onClick={() => togglePinThread(threadId, thread.pinned)}
+                                title={thread.pinned ? "Unpin thread" : "Pin to top"}
+                              >
+                                <Pin size={12} style={{ color: thread.pinned ? '#f59e0b' : 'inherit' }} />
+                              </button>
+                            )}
                             <button
                               className="thread-action-icon"
                               onClick={(e) => startEditingThread(e, thread)}
@@ -391,13 +411,15 @@ export default function LeftPanel({
                             >
                               <Edit2 size={12} />
                             </button>
-                            <button
-                              className="thread-action-icon delete"
-                              onClick={() => deleteThread(thread.id)}
-                              title="Delete thread"
-                            >
-                              <Trash2 size={12} />
-                            </button>
+                            {deleteThread && (
+                              <button
+                                className="thread-action-icon delete"
+                                onClick={() => deleteThread(threadId)}
+                                title="Delete thread"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
                           </div>
                         </div>
 
@@ -417,7 +439,7 @@ export default function LeftPanel({
                           )}
 
                           <span className="thread-msg-count">
-                            {thread.messageCount || 0} msgs
+                            {thread.messageCount || thread.messages?.length || 0} msgs
                           </span>
                         </div>
                       </div>
@@ -495,7 +517,9 @@ export default function LeftPanel({
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Top Language</span>
-                            <span style={{ fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{githubData.languages?.[0] || '--'}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {githubData.languages?.[0]?.name || (typeof githubData.languages?.[0] === 'string' ? githubData.languages[0] : '--')}
+                            </span>
                           </div>
                         </div>
                       </>
@@ -586,7 +610,7 @@ export default function LeftPanel({
                             <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.easy ?? 0}</span>
                           </div>
                           <div className="diff-bar-bg">
-                            <div style={{ width: `${Math.min(((leetcodeData?.easy ?? 0) / (leetcodeData?.total || 1)) * 100, 100)}%`, height: '100%', background: '#10b981' }}></div>
+                            <div style={{ width: `${Math.min(((Number(leetcodeData?.easy) || 0) / (Number(leetcodeData?.total) || 1)) * 100, 100)}%`, height: '100%', background: '#10b981' }}></div>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginTop: '4px' }}>
@@ -594,7 +618,7 @@ export default function LeftPanel({
                             <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.medium ?? 0}</span>
                           </div>
                           <div className="diff-bar-bg">
-                            <div style={{ width: `${Math.min(((leetcodeData?.medium ?? 0) / (leetcodeData?.total || 1)) * 100, 100)}%`, height: '100%', background: '#f59e0b' }}></div>
+                            <div style={{ width: `${Math.min(((Number(leetcodeData?.medium) || 0) / (Number(leetcodeData?.total) || 1)) * 100, 100)}%`, height: '100%', background: '#f59e0b' }}></div>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginTop: '4px' }}>
@@ -602,7 +626,7 @@ export default function LeftPanel({
                             <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.hard ?? 0}</span>
                           </div>
                           <div className="diff-bar-bg">
-                            <div style={{ width: `${Math.min(((leetcodeData?.hard ?? 0) / (leetcodeData?.total || 1)) * 100, 100)}%`, height: '100%', background: '#ef4444' }}></div>
+                            <div style={{ width: `${Math.min(((Number(leetcodeData?.hard) || 0) / (Number(leetcodeData?.total) || 1)) * 100, 100)}%`, height: '100%', background: '#ef4444' }}></div>
                           </div>
                         </div>
 
@@ -780,7 +804,7 @@ export default function LeftPanel({
                       <span>No persistent facts recorded yet. Chat with DevPulse or click "+ Add" above!</span>
                     </div>
                   ) : (
-                    memories.map((mem) => {
+                    memories.map((mem: DevMemory) => {
                       const catConfig = MEMORY_CATEGORIES.find(c => c.id === mem.category) || MEMORY_CATEGORIES[5];
                       return (
                         <div key={mem._id || mem.text} className="memory-pill-badge">

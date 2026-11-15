@@ -1,7 +1,12 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import { ChatMsg } from '../../hooks/useChat';
 
-export default function ChatMessage({ msg }) {
+interface ChatMessageProps {
+  msg: ChatMsg;
+}
+
+export default function ChatMessage({ msg }: ChatMessageProps) {
   return (
     <div className={`message-wrapper ${msg.role}`}>
       <div className={`message-group ${msg.role}`}>
