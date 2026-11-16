@@ -3,7 +3,6 @@ import { Menu, Zap, LogOut, RotateCcw } from 'lucide-react';
 import { useDevData } from './hooks/useDevData';
 import { useChat } from './hooks/useChat';
 import { useDevMemories } from './hooks/useDevMemories';
-import { API_BASE_URL } from './config';
 import { apiFetch } from './utils/api';
 import { useResume } from './hooks/useResume';
 import Toast, { ToastData } from './components/layout/Toast';
@@ -18,7 +17,7 @@ import { ToastType, UserCredentials } from './types';
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userCredentials, setUserCredentials] = useState<UserCredentials | any | null>(null);
+  const [userCredentials, setUserCredentials] = useState<UserCredentials | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(window.innerWidth > 768);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [skipOnboarding, setSkipOnboarding] = useState(false);
@@ -33,7 +32,7 @@ function AppContent() {
 
   // ─── Cookie‑based auth check ───────────────────────────────────────
   useEffect(() => {
-    apiFetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
+    apiFetch('/auth/me')
       .then(res => res.json())
       .then(data => {
         if (data.user) {
@@ -71,7 +70,7 @@ function AppContent() {
   };
 
   const handleLogout = () => {
-    apiFetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
+    apiFetch('/auth/logout', { method: 'POST' })
       .then(() => {
         setIsAuthenticated(false);
         setUserCredentials(null);
@@ -108,7 +107,7 @@ function AppContent() {
     deleteThread,
     updateCategory,
     refreshConversations
-  } = useChat(githubData, leetcodeData, userCredentials, dailyBrief, briefLoading, showToast);
+  } = useChat(userCredentials, dailyBrief, briefLoading, showToast);
 
   const {
     resumeAnalysis,
@@ -124,13 +123,6 @@ function AppContent() {
     clearSelectedFile,
     runAnalysis
   } = useResume(showToast, userCredentials, setUserCredentials);
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
-  };
 
   useEffect(() => {
     document.title = activeConversation?.title
@@ -270,15 +262,12 @@ function AppContent() {
                       inputRef={inputRef}
                       messagesEndRef={messagesEndRef}
                       submitMessage={submitMessage}
-                      getGreeting={getGreeting}
                       userCredentials={userCredentials}
                       briefLoading={briefLoading}
                       activeConversation={activeConversation}
                       createNewThread={createNewThread}
                       renameThread={renameThread}
                       togglePinThread={togglePinThread}
-                      updateCategory={updateCategory}
-                      devMemoriesState={devMemoriesState}
                     />
                   } />
                   <Route path="/resume" element={

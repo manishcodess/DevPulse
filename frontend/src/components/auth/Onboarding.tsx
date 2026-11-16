@@ -4,7 +4,6 @@ import { generateAIContent } from '../../services/aiService';
 import { readFileAsBase64, readFileAsText } from '../../utils/file';
 import { extractUsername } from '../../utils/username';
 import { buildResumePrompt } from '../../utils/prompts';
-import { API_BASE_URL } from '../../config';
 import { apiFetch } from '../../utils/api';
 import { UserCredentials } from '../../types';
 
@@ -60,12 +59,11 @@ export default function Onboarding({ onComplete, onSkip }: OnboardingProps) {
       }
 
       setLoadingText("Finalizing setup...");
-      const response = await apiFetch(`${API_BASE_URL}/auth/onboard`, {
+      const response = await apiFetch('/auth/onboard', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
         body: JSON.stringify({
           githubUsername: extractUsername(formData.github),
           leetcodeUsername: extractUsername(formData.leetcode),

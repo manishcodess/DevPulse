@@ -298,7 +298,7 @@ export default function ResumeReview({
 
   const renderGeneralAnalysis = () => {
     if (!parsedAnalysis) return null;
-    const { score, scoreColor, strongPoints = [], weakPoints = [], keywords = [], verdict } = parsedAnalysis;
+    const { score, scoreColor, strengths = [], weaknesses = [], keywords = [], verdict } = parsedAnalysis;
 
     return (
       <div className="resume-analysis-container">
@@ -311,7 +311,7 @@ export default function ResumeReview({
           <div className="feedback-card strong">
             <h3>Strong Points</h3>
             <ul style={{ fontSize: '13.5px', lineHeight: 1.5 }}>
-              {strongPoints.map((p, i) => (
+              {strengths.map((p, i) => (
                 <li key={i} style={{ marginBottom: '6px' }}>{formatText(p.replace('-', '').trim())}</li>
               ))}
             </ul>
@@ -319,7 +319,7 @@ export default function ResumeReview({
           <div className="feedback-card weak">
             <h3>Areas to Improve</h3>
             <ul style={{ fontSize: '13.5px', lineHeight: 1.5 }}>
-              {weakPoints.map((p, i) => (
+              {weaknesses.map((p, i) => (
                 <li key={i} style={{ marginBottom: '6px' }}>{formatText(p.replace('-', '').trim())}</li>
               ))}
             </ul>

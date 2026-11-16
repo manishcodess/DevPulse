@@ -10,27 +10,27 @@ export const getScoreColor = (score: number, max = 100): string => {
 export const parseResumeAnalysis = (analysisInput: any): ParsedResumeResult | null => {
   if (!analysisInput) return null;
 
-  // 1. If it's already a structured JSON Object from JD match endpoint
+  // 1. Structured JSON from JD match endpoint
   if (typeof analysisInput === 'object' && analysisInput.matchScore !== undefined) {
     const score = Number(analysisInput.matchScore) || 0;
-    const scoreColor = getScoreColor(score, 100);
     return {
       isStructuredMatch: true,
       score,
-      scoreColor,
+      scoreColor: getScoreColor(score, 100),
       matchTier: analysisInput.matchTier || (score >= 80 ? 'Strong Match' : score >= 60 ? 'Moderate Match' : 'Needs Work'),
       targetRole: analysisInput.targetRoleIdentified || '',
       matchingSkills: Array.isArray(analysisInput.matchingSkills) ? analysisInput.matchingSkills : [],
       missingSkills: Array.isArray(analysisInput.missingSkills) ? analysisInput.missingSkills : [],
       strengths: Array.isArray(analysisInput.strengths) ? analysisInput.strengths : [],
       weaknesses: Array.isArray(analysisInput.weaknesses) ? analysisInput.weaknesses : [],
+      keywords: [],
       starBulletImprovements: Array.isArray(analysisInput.starBulletImprovements) ? analysisInput.starBulletImprovements : [],
       atsRecommendations: Array.isArray(analysisInput.atsRecommendations) ? analysisInput.atsRecommendations : [],
       verdict: analysisInput.verdict || ''
     };
   }
 
-  // 2. If it's a string that might be JSON
+  // 2. String that might be JSON
   if (typeof analysisInput === 'string' && analysisInput.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(analysisInput);
@@ -46,13 +46,13 @@ export const parseResumeAnalysis = (analysisInput: any): ParsedResumeResult | nu
   const analysisText = typeof analysisInput === 'string' ? analysisInput : '';
   const scoreMatch = analysisText.match(/SCORE:\s*(\d+)/i);
   const score = scoreMatch ? parseInt(scoreMatch[1], 10) : 0;
-  const scoreColor = score > 7 ? '#22c55e' : score >= 5 ? '#f59e0b' : '#ef4444';
+  const scoreColor = getScoreColor(score, 10);
 
   const strongMatch = analysisText.match(/STRONG POINTS[^\n]*\n([\s\S]*?)(?=WEAK POINTS)/i);
-  const strongPoints = strongMatch ? strongMatch[1].split('\n').filter(p => p.trim().startsWith('-')) : [];
+  const strengths = strongMatch ? strongMatch[1].split('\n').filter(p => p.trim().startsWith('-')) : [];
 
   const weakMatch = analysisText.match(/WEAK POINTS[^\n]*\n([\s\S]*?)(?=MISSING KEYWORDS)/i);
-  const weakPoints = weakMatch ? weakMatch[1].split('\n').filter(p => p.trim().startsWith('-')) : [];
+  const weaknesses = weakMatch ? weakMatch[1].split('\n').filter(p => p.trim().startsWith('-')) : [];
 
   const keywordMatch = analysisText.match(/MISSING KEYWORDS[^\n]*\n([\s\S]*?)(?=ONE LINE VERDICT)/i);
   const keywords = keywordMatch 
@@ -69,10 +69,9 @@ export const parseResumeAnalysis = (analysisInput: any): ParsedResumeResult | nu
     isStructuredMatch: false,
     score,
     scoreColor,
-    strongPoints,
-    weakPoints,
+    strengths,
+    weaknesses,
     keywords,
     verdict
   };
 };
-

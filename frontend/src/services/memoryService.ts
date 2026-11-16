@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '../config';
 import { apiFetch } from '../utils/api';
 import { DevMemory } from '../types';
 
@@ -7,47 +6,36 @@ export interface MemoriesResponse {
   targetRole?: string;
   targetCompanies?: string[];
   preferredLanguage?: string;
-  [key: string]: any;
 }
 
 /**
  * Fetches all developer memories & target role info
  */
 export async function fetchMemories(): Promise<MemoriesResponse> {
-  const response = await apiFetch(`${API_BASE_URL}/auth/memories`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-  });
-  const data = await response.json();
-  return data;
+  const response = await apiFetch('/auth/memories');
+  return response.json();
 }
 
 /**
  * Adds a new developer insight / memory
  */
 export async function addMemory(text: string, category = 'general'): Promise<MemoriesResponse> {
-  const response = await apiFetch(`${API_BASE_URL}/auth/memories`, {
+  const response = await apiFetch('/auth/memories', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ text, category, source: 'manual' }),
   });
-  const data = await response.json();
-  return data;
+  return response.json();
 }
 
 /**
  * Deletes a developer insight / memory by id
  */
 export async function deleteMemory(memoryId: string): Promise<MemoriesResponse> {
-  const response = await apiFetch(`${API_BASE_URL}/auth/memories/${memoryId}`, {
+  const response = await apiFetch(`/auth/memories/${memoryId}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
   });
-  const data = await response.json();
-  return data;
+  return response.json();
 }
 
 /**
@@ -58,13 +46,10 @@ export async function updateProfileInsights(insights: {
   targetCompanies?: string[];
   preferredLanguage?: string;
 }): Promise<any> {
-  const response = await apiFetch(`${API_BASE_URL}/auth/profile-insights`, {
+  const response = await apiFetch('/auth/profile-insights', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify(insights),
   });
-  const data = await response.json();
-  return data;
+  return response.json();
 }
-

@@ -1,6 +1,5 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Zap, Mail, Lock, User, ArrowRight } from 'lucide-react';
-import { API_BASE_URL } from '../../config';
 import { apiFetch } from '../../utils/api';
 import { UserCredentials } from '../../types';
 
@@ -28,10 +27,9 @@ export default function Signup({ onSignup, onSwitchToLogin }: SignupProps) {
     setError(null);
 
     try {
-      const response = await apiFetch(`${API_BASE_URL}/auth/signup`, {
+      const response = await apiFetch('/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(formData)
       });
       

@@ -2,14 +2,13 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { generateAIContent, matchResumeWithJD } from '../services/aiService';
 import { readFileAsBase64, readFileAsText } from '../utils/file';
 import { buildResumePrompt } from '../utils/prompts';
-import { API_BASE_URL } from '../config';
 import { apiFetch } from '../utils/api';
 import { ToastFn, UserCredentials } from '../types';
 
 export function useResume(
   showToast: ToastFn = () => {},
-  userCredentials: (UserCredentials & { resumeContext?: any }) | null = null,
-  setUserCredentials: (user: any) => void = () => {}
+  userCredentials: UserCredentials | null = null,
+  setUserCredentials: (user: UserCredentials) => void = () => {}
 ) {
   const [resumeAnalysis, setResumeAnalysis] = useState<any>(null);
   const [resumeLoading, setResumeLoading] = useState<boolean>(false);
@@ -87,7 +86,7 @@ export function useResume(
         // Refresh userCredentials if updated on backend
         if (userCredentials) {
           try {
-            const meRes = await apiFetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+            const meRes = await apiFetch('/auth/me');
             const meData = await meRes.json();
             if (meData.user) {
               setUserCredentials(meData.user);
@@ -116,10 +115,9 @@ export function useResume(
         // Save context
         if (userCredentials) {
           try {
-            const res = await apiFetch(`${API_BASE_URL}/auth/resume`, {
+            const res = await apiFetch('/auth/resume', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
               body: JSON.stringify({ resumeContext: analysisText })
             });
             const data = await res.json();
@@ -154,4 +152,3 @@ export function useResume(
     runAnalysis
   };
 }
-

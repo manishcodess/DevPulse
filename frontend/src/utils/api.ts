@@ -1,8 +1,8 @@
 import { API_BASE_URL } from '../config';
 
 /**
- * A wrapper around native fetch that handles network errors
- * and normalizes backend error responses into thrown Error objects.
+ * A wrapper around native fetch that handles network errors,
+ * includes cookies by default, and normalizes backend error responses into thrown Error objects.
  * 
  * @param endpoint - The API endpoint path (e.g. '/auth/login').
  * @param options - Standard fetch options (method, headers, body, etc.).
@@ -11,12 +11,18 @@ import { API_BASE_URL } from '../config';
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   let url = endpoint;
   if (!endpoint.startsWith('http')) {
-    url = endpoint.startsWith(API_BASE_URL) ? endpoint : `${API_BASE_URL}${endpoint}`;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    url = endpoint.startsWith(API_BASE_URL) ? endpoint : `${API_BASE_URL}${cleanEndpoint}`;
   }
   
+  const mergedOptions: RequestInit = {
+    credentials: 'include',
+    ...options,
+  };
+
   let response: Response;
   try {
-    response = await fetch(url, options);
+    response = await fetch(url, mergedOptions);
   } catch (error: unknown) {
     const err = error as Error;
     console.error(`[apiFetch] Network Error on ${url}:`, err);
@@ -51,4 +57,3 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
 
   return response;
 }
-

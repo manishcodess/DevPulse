@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { streamAIChat } from '../services/aiService';
 import {
   fetchConversations,
@@ -7,27 +7,20 @@ import {
   updateConversation,
   deleteConversation
 } from '../services/conversationService';
-import { ToastFn, UserCredentials, GithubData, LeetcodeData } from '../types';
+import { ToastFn, UserCredentials, Conversation, ChatMessage } from '../types';
 
-export interface ChatMsg {
-  role: 'user' | 'ai' | 'assistant' | 'system';
-  content: string;
-  timestamp?: string;
-  isDailyBrief?: boolean;
-}
+export type ChatMsg = ChatMessage;
 
 export function useChat(
-  githubData?: GithubData | null,
-  leetcodeData?: LeetcodeData | null,
   userCredentials?: UserCredentials | null,
   dailyBrief?: string,
   briefLoading?: boolean,
   showToast?: ToastFn
 ) {
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [activeConversation, setActiveConversation] = useState<any | null>(null);
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState<boolean>(false);
 
   const [input, setInput] = useState<string>('');
@@ -37,7 +30,7 @@ export function useChat(
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
-  const getConvId = (conv: any): string => conv?.id || conv?._id || '';
+  const getConvId = (conv: Conversation | null | undefined): string => conv?.id || conv?._id || '';
 
   // ─── 1. Load Conversations List ─────────────────────────────────────────────
   const loadConversations = useCallback(async (selectId: string | null = null) => {
@@ -48,11 +41,11 @@ export function useChat(
       setConversations(list);
 
       if (list.length > 0) {
-        // Pick requested ID, or current active ID, or the first conversation
-        const targetId = selectId || (activeConversationId && list.some(c => getConvId(c) === activeConversationId) ? activeConversationId : getConvId(list[0]));
+        const targetId = selectId || (activeConversationId && list.some(c => getConvId(c) === activeConversationId)
+          ? activeConversationId
+          : getConvId(list[0]));
         setActiveConversationId(targetId);
       } else {
-        // Create initial default conversation
         const initial = await createConversation({
           title: 'Daily Check-in & Career Prep',
           category: 'general'
@@ -61,7 +54,7 @@ export function useChat(
           setConversations([initial]);
           setActiveConversationId(getConvId(initial));
           setActiveConversation(initial);
-          setMessages((initial.messages as any) || []);
+          setMessages(initial.messages || []);
         }
       }
     } catch (err: any) {
@@ -73,7 +66,7 @@ export function useChat(
 
   useEffect(() => {
     loadConversations();
-  }, [userCredentials]); // Load once user credentials are ready
+  }, [loadConversations]);
 
   // ─── 2. Load Active Conversation Messages ──────────────────────────────────
   useEffect(() => {
@@ -85,7 +78,7 @@ export function useChat(
         const fullConv = await fetchConversation(activeConversationId);
         if (isMounted && fullConv) {
           setActiveConversation(fullConv);
-          setMessages((fullConv.messages as any) || []);
+          setMessages(fullConv.messages || []);
         }
       } catch (err: any) {
         console.warn(`Failed to load conversation ${activeConversationId}:`, err.message);
@@ -125,7 +118,7 @@ export function useChat(
         setConversations(prev => [newConv, ...prev]);
         setActiveConversationId(newId);
         setActiveConversation(newConv);
-        setMessages((newConv.messages as any) || []);
+        setMessages(newConv.messages || []);
         if (showToast) showToast(`Started new thread: "${newConv.title}"`, 'success');
         setTimeout(() => inputRef.current?.focus(), 50);
         return newConv;
@@ -149,7 +142,7 @@ export function useChat(
       if (updated) {
         setConversations(prev => prev.map(c => getConvId(c) === convId ? { ...c, title: updated.title } : c));
         if (activeConversationId === convId) {
-          setActiveConversation((prev: any) => prev ? { ...prev, title: updated.title } : prev);
+          setActiveConversation(prev => prev ? { ...prev, title: updated.title } : prev);
         }
         if (showToast) showToast('Thread renamed!', 'success');
       }
@@ -168,7 +161,7 @@ export function useChat(
           return list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
         });
         if (activeConversationId === convId) {
-          setActiveConversation((prev: any) => prev ? { ...prev, pinned: updated.pinned } : prev);
+          setActiveConversation(prev => prev ? { ...prev, pinned: updated.pinned } : prev);
         }
         if (showToast) showToast(updated.pinned ? 'Thread pinned to top!' : 'Thread unpinned', 'info');
       }
@@ -187,7 +180,6 @@ export function useChat(
         if (remaining.length > 0) {
           setActiveConversationId(getConvId(remaining[0]));
         } else {
-          // If no threads remain, create a fresh one
           await createNewThread('New Coaching Session', 'general');
         }
       }
@@ -204,7 +196,7 @@ export function useChat(
       if (updated) {
         setConversations(prev => prev.map(c => getConvId(c) === convId ? { ...c, category: updated.category } : c));
         if (activeConversationId === convId) {
-          setActiveConversation((prev: any) => prev ? { ...prev, category: updated.category } : prev);
+          setActiveConversation(prev => prev ? { ...prev, category: updated.category } : prev);
         }
       }
     } catch (err: any) {
@@ -217,20 +209,17 @@ export function useChat(
     if (!userMessage.trim() || isLoading || isStreaming) return;
 
     let targetConvId = activeConversationId;
-
-    // If somehow no active conversation exists, create one first
     if (!targetConvId) {
       const created = await createNewThread('New Coaching Session', 'general');
       if (created) targetConvId = getConvId(created);
     }
 
     const userTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const updatedMessages: ChatMsg[] = [...messages, { role: 'user', content: userMessage, timestamp: userTime }];
+    const updatedMessages: ChatMessage[] = [...messages, { role: 'user', content: userMessage, timestamp: userTime }];
     setMessages(updatedMessages);
     setIsLoading(true);
 
     try {
-      // Build conversation history for Gemini
       const history = updatedMessages
         .filter(m => m.content && m.content.trim())
         .map(m => ({

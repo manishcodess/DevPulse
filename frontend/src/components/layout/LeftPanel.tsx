@@ -14,19 +14,9 @@ import {
   Sparkles,
   Search
 } from 'lucide-react';
-import { API_BASE_URL } from '../../config';
 import { extractUsername } from '../../utils/username';
 import { apiFetch } from '../../utils/api';
-import { GithubData, LeetcodeData, UserCredentials, DevMemory, ToastFn } from '../../types';
-
-const CATEGORY_COLORS: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  general: { label: 'General', bg: 'rgba(59, 130, 246, 0.15)', text: '#60a5fa', border: 'rgba(59, 130, 246, 0.3)' },
-  system_design: { label: 'System Design', bg: 'rgba(168, 85, 247, 0.15)', text: '#c084fc', border: 'rgba(168, 85, 247, 0.3)' },
-  dsa: { label: 'DSA Prep', bg: 'rgba(245, 158, 11, 0.15)', text: '#fbbf24', border: 'rgba(245, 158, 11, 0.3)' },
-  resume: { label: 'Resume', bg: 'rgba(16, 185, 129, 0.15)', text: '#34d399', border: 'rgba(16, 185, 129, 0.3)' },
-  mock_interview: { label: 'Mock Interview', bg: 'rgba(239, 68, 68, 0.15)', text: '#f87171', border: 'rgba(239, 68, 68, 0.3)' },
-  career: { label: 'Career', bg: 'rgba(236, 72, 153, 0.15)', text: '#f472b6', border: 'rgba(236, 72, 153, 0.3)' },
-};
+import { GithubData, LeetcodeData, UserCredentials, DevMemory, Conversation, ToastFn } from '../../types';
 
 const MEMORY_CATEGORIES = [
   { id: 'goal', label: '🎯 Target Goal', color: '#60a5fa' },
@@ -37,16 +27,66 @@ const MEMORY_CATEGORIES = [
   { id: 'general', label: '📝 Note', color: '#9ca3af' },
 ];
 
+interface ServiceEditDrawerProps {
+  serviceName: 'GitHub' | 'LeetCode';
+  inputValue: string;
+  isConnecting: boolean;
+  onInputChange: (val: string) => void;
+  onUpdate: () => void;
+  onClear: () => void;
+  onCancel: () => void;
+}
+
+function ServiceEditDrawer({
+  serviceName,
+  inputValue,
+  isConnecting,
+  onInputChange,
+  onUpdate,
+  onClear,
+  onCancel
+}: ServiceEditDrawerProps) {
+  const serviceKey = serviceName.toLowerCase();
+  return (
+    <div className="edit-service-drawer">
+      <input
+        placeholder={`New ${serviceName} Username`}
+        value={inputValue}
+        onChange={(e) => onInputChange(e.target.value)}
+        className="integration-input"
+      />
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <button
+          onClick={onUpdate}
+          disabled={!inputValue.trim() || isConnecting}
+          className={`connect-service-btn ${serviceKey}`}
+          style={{ flex: 1 }}
+        >
+          {isConnecting ? 'Updating...' : 'Update'}
+        </button>
+        <button
+          onClick={onClear}
+          disabled={isConnecting}
+          className="clear-profile-btn"
+        >
+          <Trash2 size={13} /> Clear
+        </button>
+      </div>
+      <button onClick={onCancel} className="cancel-btn">Cancel</button>
+    </div>
+  );
+}
+
 interface LeftPanelProps {
   isPanelOpen: boolean;
   setIsPanelOpen: (val: boolean) => void;
-  githubData?: GithubData | any;
-  leetcodeData?: LeetcodeData | any;
-  userCredentials?: UserCredentials | any;
+  githubData?: GithubData | null;
+  leetcodeData?: LeetcodeData | null;
+  userCredentials?: UserCredentials | null;
   logout?: () => void;
   setUserCredentials: React.Dispatch<React.SetStateAction<any>>;
   showToast?: ToastFn;
-  conversations?: any[];
+  conversations?: Conversation[];
   activeConversationId?: string | null;
   selectThread?: (id: string) => void;
   createNewThread?: (title?: string, category?: string) => Promise<any>;
@@ -75,7 +115,7 @@ export default function LeftPanel({
 }: LeftPanelProps) {
   const [activeTab, setActiveTab] = useState<'threads' | 'telemetry' | 'memory'>('threads');
 
-  // GitHub & LeetCode connection states
+  // Connection states
   const [githubInput, setGithubInput] = useState('');
   const [leetcodeInput, setLeetcodeInput] = useState('');
   const [githubConnecting, setGithubConnecting] = useState(false);
@@ -106,15 +146,16 @@ export default function LeftPanel({
 
   // ─── Connection Handlers ──────────────────────────────────────────────────
   const connectService = async (type: 'github' | 'leetcode') => {
-    const body: Record<string, string> = {};
-    if (type === 'github') body.githubUsername = extractUsername(githubInput);
-    else if (type === 'leetcode') body.leetcodeUsername = extractUsername(leetcodeInput);
+    const rawInput = type === 'github' ? githubInput : leetcodeInput;
+    const bodyKey = type === 'github' ? 'githubUsername' : 'leetcodeUsername';
+    const setConnecting = type === 'github' ? setGithubConnecting : setLeetcodeConnecting;
+
+    setConnecting(true);
     try {
-      const res = await apiFetch(`${API_BASE_URL}/auth/onboard`, {
+      const res = await apiFetch('/auth/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
+        body: JSON.stringify({ [bodyKey]: extractUsername(rawInput) }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -123,35 +164,30 @@ export default function LeftPanel({
       if (type === 'github') {
         setGithubInput('');
         setEditingGithub(false);
-      }
-      if (type === 'leetcode') {
+      } else {
         setLeetcodeInput('');
         setEditingLeetcode(false);
       }
-      if (showToast) {
-        showToast(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile linked successfully!`);
-      }
+      showToast?.(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile linked successfully!`);
     } catch (err: any) {
       console.error(err);
-      if (showToast) showToast(err.message, 'error');
+      showToast?.(err.message, 'error');
+    } finally {
+      setConnecting(false);
     }
   };
 
   const clearProfile = async (type: 'github' | 'leetcode') => {
-    const oldUsername = type === 'github' ? (githubData?.username || userCredentials?.github) : (leetcodeData?.username || userCredentials?.leetcode);
-    if (type === 'github') setGithubConnecting(true);
-    if (type === 'leetcode') setLeetcodeConnecting(true);
+    const oldUsername = type === 'github' ? (githubData?.username || userCredentials?.github) : userCredentials?.leetcode;
+    const setConnecting = type === 'github' ? setGithubConnecting : setLeetcodeConnecting;
+    setConnecting(true);
 
     try {
-      const body: Record<string, string> = {};
-      if (type === 'github') body.githubUsername = '';
-      else if (type === 'leetcode') body.leetcodeUsername = '';
-
-      const res = await apiFetch(`${API_BASE_URL}/auth/onboard`, {
+      const bodyKey = type === 'github' ? 'githubUsername' : 'leetcodeUsername';
+      const res = await apiFetch('/auth/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body),
+        body: JSON.stringify({ [bodyKey]: '' }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -162,26 +198,23 @@ export default function LeftPanel({
 
       setUserCredentials((prev: any) => ({ 
         ...prev, 
-        ...(data.user || (type === 'github' ? { github: '', githubUsername: '' } : { leetcode: '', leetcodeUsername: '' }))
+        ...(data.user || (type === 'github' ? { github: '' } : { leetcode: '' }))
       }));
 
       if (type === 'github') { setGithubInput(''); setEditingGithub(false); }
-      if (type === 'leetcode') { setLeetcodeInput(''); setEditingLeetcode(false); }
+      else { setLeetcodeInput(''); setEditingLeetcode(false); }
 
-      if (showToast) {
-        showToast(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile cleared. Ready for fresh connection!`, 'info');
-      }
+      showToast?.(`${type === 'github' ? 'GitHub' : 'LeetCode'} profile cleared. Ready for fresh connection!`, 'info');
     } catch (err: any) {
       console.error(`Failed to clear ${type} profile:`, err);
-      if (showToast) showToast(err.message || `Failed to clear ${type} profile`, 'error');
+      showToast?.(err.message || `Failed to clear ${type} profile`, 'error');
     } finally {
-      if (type === 'github') setGithubConnecting(false);
-      if (type === 'leetcode') setLeetcodeConnecting(false);
+      setConnecting(false);
     }
   };
 
   // ─── Thread Rename Handlers ───────────────────────────────────────────────
-  const startEditingThread = (e: MouseEvent, thread: any) => {
+  const startEditingThread = (e: MouseEvent, thread: Conversation) => {
     e.stopPropagation();
     setEditingThreadId(thread.id || thread._id);
     setEditingTitle(thread.title);
@@ -220,8 +253,8 @@ export default function LeftPanel({
   const filteredConversations = conversations.filter(c => {
     const title = c.title || '';
     const cat = c.category || '';
-    return title.toLowerCase().includes(threadSearch.toLowerCase()) ||
-      cat.toLowerCase().includes(threadSearch.toLowerCase());
+    const query = threadSearch.toLowerCase();
+    return title.toLowerCase().includes(query) || cat.toLowerCase().includes(query);
   });
 
   return (
@@ -361,13 +394,12 @@ export default function LeftPanel({
                   filteredConversations.map((thread) => {
                     const threadId = thread.id || thread._id;
                     const isActive = threadId === activeConversationId;
-                    const catStyle = CATEGORY_COLORS[thread.category] || CATEGORY_COLORS.general;
 
                     return (
                       <div
                         key={threadId}
                         className={`thread-item-card ${isActive ? 'active' : ''} ${thread.pinned ? 'pinned' : ''}`}
-                        onClick={() => selectThread && selectThread(threadId)}
+                        onClick={() => selectThread?.(threadId)}
                       >
                         <div className="thread-card-top">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
@@ -398,7 +430,7 @@ export default function LeftPanel({
                             {togglePinThread && (
                               <button
                                 className="thread-action-icon"
-                                onClick={() => togglePinThread(threadId, thread.pinned)}
+                                onClick={() => togglePinThread(threadId, !!thread.pinned)}
                                 title={thread.pinned ? "Unpin thread" : "Pin to top"}
                               >
                                 <Pin size={12} style={{ color: thread.pinned ? '#f59e0b' : 'inherit' }} />
@@ -425,16 +457,13 @@ export default function LeftPanel({
 
                         {/* Thread Metadata Footer */}
                         <div className="thread-card-bottom">
-                          <span 
-                            className="thread-category-badge"
-                            style={{ background: catStyle.bg, color: catStyle.text, borderColor: catStyle.border }}
-                          >
-                            {catStyle.label}
-                          </span>
-                          
-                          {thread.lastMessageSnippet && (
+                          {thread.lastMessageSnippet ? (
                             <span className="thread-snippet" title={thread.lastMessageSnippet}>
                               {thread.lastMessageSnippet}
+                            </span>
+                          ) : (
+                            <span className="thread-snippet" style={{ fontStyle: 'italic', opacity: 0.6 }}>
+                              No messages yet
                             </span>
                           )}
 
@@ -466,7 +495,7 @@ export default function LeftPanel({
                       </button>
                     )}
                     {userCredentials?.github && (
-                      <a href={`https://github.com/${githubData?.username || userCredentials?.github || 'github'}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
+                      <a href={`https://github.com/${githubData?.username || userCredentials.github}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
                         <ExternalLink size={14} />
                       </a>
                     )}
@@ -483,7 +512,7 @@ export default function LeftPanel({
                       className="integration-input"
                     />
                     <button
-                      onClick={() => { setGithubConnecting(true); connectService('github').finally(() => setGithubConnecting(false)); }}
+                      onClick={() => connectService('github')}
                       disabled={!githubInput || githubConnecting}
                       className="connect-service-btn github"
                     >
@@ -495,62 +524,46 @@ export default function LeftPanel({
                     {!githubData ? (
                       <div className="shimmer-loader" style={{ height: '40px', marginTop: '8px' }}></div>
                     ) : (
-                      <>
-                        <div className="dev-stats-grid">
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total Commits</span>
-                            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>{githubData.totalCommits}</span>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Repositories</span>
-                            <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{githubData.publicRepos}</span>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Active Days</span>
-                            <span style={{ 
-                              fontSize: Number(githubData.activeDays) > 0 ? '16px' : '13px', 
-                              fontWeight: Number(githubData.activeDays) > 0 ? 'bold' : 'normal',
-                              color: Number(githubData.activeDays) > 0 ? '#10b981' : 'var(--text-muted)'
-                            }}>
-                              {Number(githubData.activeDays) > 0 ? `${githubData.activeDays} Days` : "Start today!"}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Top Language</span>
-                            <span style={{ fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {githubData.languages?.[0]?.name || (typeof githubData.languages?.[0] === 'string' ? githubData.languages[0] : '--')}
-                            </span>
-                          </div>
+                      <div className="dev-stats-grid">
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Total Commits</span>
+                          <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#10b981' }}>{githubData.totalCommits}</span>
                         </div>
-                      </>
-                    )}
-                    {editingGithub && (
-                      <div className="edit-service-drawer">
-                        <input
-                          placeholder="New GitHub Username"
-                          value={githubInput}
-                          onChange={(e) => setGithubInput(e.target.value)}
-                          className="integration-input"
-                        />
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button
-                            onClick={() => { setGithubConnecting(true); connectService('github').finally(() => setGithubConnecting(false)); }}
-                            disabled={!githubInput || githubConnecting}
-                            className="connect-service-btn github"
-                            style={{ flex: 1 }}
-                          >
-                            {githubConnecting ? 'Updating...' : 'Update'}
-                          </button>
-                          <button
-                            onClick={() => clearProfile('github')}
-                            disabled={githubConnecting}
-                            className="clear-profile-btn"
-                          >
-                            <Trash2 size={13} /> Clear
-                          </button>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Repositories</span>
+                          <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{githubData.publicRepos}</span>
                         </div>
-                        <button onClick={() => setEditingGithub(false)} className="cancel-btn">Cancel</button>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Active Days</span>
+                          <span style={{ 
+                            fontSize: Number(githubData.activeDays) > 0 ? '16px' : '13px', 
+                            fontWeight: Number(githubData.activeDays) > 0 ? 'bold' : 'normal',
+                            color: Number(githubData.activeDays) > 0 ? '#10b981' : 'var(--text-muted)'
+                          }}>
+                            {Number(githubData.activeDays) > 0 ? `${githubData.activeDays} Days` : "Start today!"}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Top Language</span>
+                          <span style={{ fontSize: '13px', fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {typeof githubData.languages?.[0] === 'string'
+                              ? githubData.languages[0]
+                              : githubData.languages?.[0]?.name || '--'}
+                          </span>
+                        </div>
                       </div>
+                    )}
+
+                    {editingGithub && (
+                      <ServiceEditDrawer
+                        serviceName="GitHub"
+                        inputValue={githubInput}
+                        isConnecting={githubConnecting}
+                        onInputChange={setGithubInput}
+                        onUpdate={() => connectService('github')}
+                        onClear={() => clearProfile('github')}
+                        onCancel={() => setEditingGithub(false)}
+                      />
                     )}
                   </>
                 )}
@@ -567,7 +580,7 @@ export default function LeftPanel({
                       </button>
                     )}
                     {userCredentials?.leetcode && (
-                      <a href={leetcodeData?.profileUrl || `https://leetcode.com/${leetcodeData?.username || userCredentials?.leetcode || ''}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
+                      <a href={`https://leetcode.com/u/${userCredentials.leetcode}`} target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
                         <ExternalLink size={14} />
                       </a>
                     )}
@@ -584,7 +597,7 @@ export default function LeftPanel({
                       className="integration-input"
                     />
                     <button
-                      onClick={() => { setLeetcodeConnecting(true); connectService('leetcode').finally(() => setLeetcodeConnecting(false)); }}
+                      onClick={() => connectService('leetcode')}
                       disabled={!leetcodeInput || leetcodeConnecting}
                       className="connect-service-btn leetcode"
                     >
@@ -599,7 +612,7 @@ export default function LeftPanel({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                           <span style={{ fontSize: '28px', fontWeight: '800', color: 'var(--accent-orange)', letterSpacing: '-1px' }}>
-                            {leetcodeData?.total ?? 0}
+                            {leetcodeData.total ?? 0}
                           </span>
                           <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '500' }}>Problems Solved</span>
                         </div>
@@ -607,68 +620,52 @@ export default function LeftPanel({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '8px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
                             <span style={{ color: '#10b981', fontWeight: '500' }}>Easy</span>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.easy ?? 0}</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData.easy ?? 0}</span>
                           </div>
                           <div className="diff-bar-bg">
-                            <div style={{ width: `${Math.min(((Number(leetcodeData?.easy) || 0) / (Number(leetcodeData?.total) || 1)) * 100, 100)}%`, height: '100%', background: '#10b981' }}></div>
+                            <div style={{ width: `${Math.min(((Number(leetcodeData.easy) || 0) / (Number(leetcodeData.total) || 1)) * 100, 100)}%`, height: '100%', background: '#10b981' }}></div>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginTop: '4px' }}>
                             <span style={{ color: '#f59e0b', fontWeight: '500' }}>Medium</span>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.medium ?? 0}</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData.medium ?? 0}</span>
                           </div>
                           <div className="diff-bar-bg">
-                            <div style={{ width: `${Math.min(((Number(leetcodeData?.medium) || 0) / (Number(leetcodeData?.total) || 1)) * 100, 100)}%`, height: '100%', background: '#f59e0b' }}></div>
+                            <div style={{ width: `${Math.min(((Number(leetcodeData.medium) || 0) / (Number(leetcodeData.total) || 1)) * 100, 100)}%`, height: '100%', background: '#f59e0b' }}></div>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginTop: '4px' }}>
                             <span style={{ color: '#ef4444', fontWeight: '500' }}>Hard</span>
-                            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData?.hard ?? 0}</span>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{leetcodeData.hard ?? 0}</span>
                           </div>
                           <div className="diff-bar-bg">
-                            <div style={{ width: `${Math.min(((Number(leetcodeData?.hard) || 0) / (Number(leetcodeData?.total) || 1)) * 100, 100)}%`, height: '100%', background: '#ef4444' }}></div>
+                            <div style={{ width: `${Math.min(((Number(leetcodeData.hard) || 0) / (Number(leetcodeData.total) || 1)) * 100, 100)}%`, height: '100%', background: '#ef4444' }}></div>
                           </div>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Rating</span>
-                            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData?.rating ?? '--'}</span>
+                            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData.rating ?? '--'}</span>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Top %</span>
-                            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData?.top ?? '--'}%</span>
+                            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{leetcodeData.top ?? '--'}%</span>
                           </div>
                         </div>
                       </div>
                     )}
+
                     {editingLeetcode && (
-                      <div className="edit-service-drawer">
-                        <input
-                          placeholder="New LeetCode Username"
-                          value={leetcodeInput}
-                          onChange={(e) => setLeetcodeInput(e.target.value)}
-                          className="integration-input"
-                        />
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button
-                            onClick={() => { setLeetcodeConnecting(true); connectService('leetcode').finally(() => setLeetcodeConnecting(false)); }}
-                            disabled={!leetcodeInput || leetcodeConnecting}
-                            className="connect-service-btn leetcode"
-                            style={{ flex: 1 }}
-                          >
-                            {leetcodeConnecting ? 'Updating...' : 'Update'}
-                          </button>
-                          <button
-                            onClick={() => clearProfile('leetcode')}
-                            disabled={leetcodeConnecting}
-                            className="clear-profile-btn"
-                          >
-                            <Trash2 size={13} /> Clear
-                          </button>
-                        </div>
-                        <button onClick={() => setEditingLeetcode(false)} className="cancel-btn">Cancel</button>
-                      </div>
+                      <ServiceEditDrawer
+                        serviceName="LeetCode"
+                        inputValue={leetcodeInput}
+                        isConnecting={leetcodeConnecting}
+                        onInputChange={setLeetcodeInput}
+                        onUpdate={() => connectService('leetcode')}
+                        onClear={() => clearProfile('leetcode')}
+                        onCancel={() => setEditingLeetcode(false)}
+                      />
                     )}
                   </>
                 )}
@@ -832,4 +829,3 @@ export default function LeftPanel({
     </aside>
   );
 }
-

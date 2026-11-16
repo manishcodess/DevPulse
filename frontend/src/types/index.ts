@@ -9,6 +9,8 @@ export interface UserCredentials {
   email: string;
   github?: string;
   leetcode?: string;
+  bio?: string;
+  resumeContext?: string;
   targetRole?: string;
   targetCompanies?: string[];
   preferredLanguage?: string;
@@ -19,8 +21,9 @@ export interface UserCredentials {
 export interface DevMemory {
   _id: string;
   text: string;
-  category?: string;
-  source?: 'manual' | 'ai' | string;
+  category?: 'goal' | 'weakness' | 'strength' | 'tech_stack' | 'preference' | 'general' | string;
+  source?: 'manual' | 'ai_extracted' | string;
+  confidence?: number;
   createdAt?: string;
 }
 
@@ -44,6 +47,8 @@ export interface GithubData {
   totalCommits: number | string;
   publicRepos: number | string;
   streak: number | string;
+  todayCommits?: number;
+  yesterdayCommits?: number;
   activeDays?: number | string;
   languages: (LanguageStat | string)[];
   recentCommits?: CommitItem[];
@@ -51,35 +56,46 @@ export interface GithubData {
 
 export interface LeetCodeSubmission {
   title: string;
-  status: string;
+  titleSlug?: string;
   timestamp: string;
 }
 
 export interface LeetcodeData {
   error?: boolean;
-  totalSolved: number | string;
-  easySolved: number | string;
-  mediumSolved: number | string;
-  hardSolved: number | string;
-  ranking?: number | string;
+  total: number | string;
+  easy: number | string;
+  medium: number | string;
+  hard: number | string;
+  rating?: number | string | null;
+  top?: number | string | null;
+  globalRank?: number | string | null;
+  highestRating?: number | string | null;
+  streak?: number;
   recentSubmissions?: LeetCodeSubmission[];
 }
 
 export interface ChatMessage {
   id?: string;
-  role: 'user' | 'assistant' | 'system';
+  _id?: string;
+  role: 'user' | 'ai' | 'assistant' | 'system';
   content: string;
-  timestamp?: string | Date;
+  timestamp?: string;
+  isDailyBrief?: boolean;
   parts?: any[];
 }
 
 export interface Conversation {
+  id?: string;
   _id: string;
   userId?: string;
   title: string;
-  category?: 'general' | 'dsa' | 'system_design' | 'resume' | 'mock_interview' | string;
+  category?: 'general' | 'dsa' | 'system_design' | 'resume' | 'mock_interview' | 'career' | string;
   pinned?: boolean;
   tags?: string[];
+  summary?: string;
+  messageCount?: number;
+  lastMessageSnippet?: string;
+  lastMessageRole?: string | null;
   messages: ChatMessage[];
   updatedAt: string;
   createdAt?: string;
@@ -112,12 +128,10 @@ export interface ParsedResumeResult {
   targetRole?: string;
   matchingSkills?: string[];
   missingSkills?: string[];
-  strengths?: string[];
-  weaknesses?: string[];
-  strongPoints?: string[];
-  weakPoints?: string[];
-  keywords?: string[];
-  verdict?: string;
+  strengths: string[];
+  weaknesses: string[];
+  keywords: string[];
+  verdict: string;
   starBulletImprovements?: StarBulletImprovement[];
   atsRecommendations?: string[];
 }

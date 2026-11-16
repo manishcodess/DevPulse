@@ -1,79 +1,65 @@
-import { API_BASE_URL } from '../config';
 import { apiFetch } from '../utils/api';
 import { StructuredResumeMatch } from '../types';
 
-// ─── generateAIContent ────────────────────────────────────────────────────────
-// Sends a prompt to the backend and gets back a full text response (not streamed).
-// Used for: Daily Brief, Resume Analysis
-// `contents` can be a plain string or an array of content parts (for PDFs)
+/**
+ * Sends prompt parts to AI for one-shot text generation (non-streamed).
+ */
 export async function generateAIContent(contents: any): Promise<string> {
-  const response = await apiFetch(`${API_BASE_URL}/ai/generate`, {
+  const response = await apiFetch('/ai/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ contents }),
   });
 
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await response.text();
-    throw new Error(`Server returned error (${response.status}): ${text.slice(0, 120) || 'Non-JSON response received'}`);
-  }
-
   const data = await response.json();
   return data.text;
 }
 
+/**
+ * Fetches the daily coaching briefing based on live developer telemetry.
+ */
 export async function fetchDailyBrief(forceFresh = false): Promise<string> {
-  const url = forceFresh ? `${API_BASE_URL}/ai/daily-brief?fresh=true` : `${API_BASE_URL}/ai/daily-brief`;
-  const response = await apiFetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include'
-  });
-
+  const url = forceFresh ? '/ai/daily-brief?fresh=true' : '/ai/daily-brief';
+  const response = await apiFetch(url);
   const data = await response.json();
   return data.text;
 }
 
+/**
+ * Streams AI mentor response chunks for chat interface.
+ */
 export async function streamAIChat(
   messageHistory: any[],
   conversationId: string | null = null,
   activeCategory = 'general'
 ): Promise<ReadableStream<Uint8Array> | null> {
-  const response = await apiFetch(`${API_BASE_URL}/ai/chat`, {
+  const response = await apiFetch('/ai/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({
       contents: messageHistory,
       conversationId,
-      activeCategory
+      activeCategory,
     }),
   });
-  return response.body; // ReadableStream — the caller reads chunks from this
+  return response.body;
 }
 
+/**
+ * Evaluates candidate resume against target job description for ATS fit and skill gaps.
+ */
 export async function matchResumeWithJD(
   contents: any,
   jobDescription: string,
   textContent = ''
 ): Promise<StructuredResumeMatch> {
-  const response = await apiFetch(`${API_BASE_URL}/ai/resume-match`, {
+  const response = await apiFetch('/ai/resume-match', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
     body: JSON.stringify({ contents, jobDescription, textContent }),
   });
-
-  const contentType = response.headers.get('content-type');
-  if (!contentType || !contentType.includes('application/json')) {
-    const text = await response.text();
-    throw new Error(`Server returned error (${response.status}): ${text.slice(0, 120) || 'Non-JSON response'}`);
-  }
 
   const data = await response.json();
   if (data.error) throw new Error(data.error);
   return data.data;
 }
-

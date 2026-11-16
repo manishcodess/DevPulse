@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchDailyBrief } from '../services/aiService';
 import { getCachedData, setCachedData } from '../utils/storage';
-import { API_BASE_URL } from '../config';
 import { apiFetch } from '../utils/api';
 import { GithubData, LeetcodeData, ToastFn, UserCredentials } from '../types';
 
 export function useDevData(showToast: ToastFn = () => {}, userCredentials: UserCredentials | null = null) {
-  const [githubData, setGithubData]   = useState<GithubData | null>(null);
-  const [leetcodeData, setLeetcodeData] = useState<LeetcodeData | any | null>(null);
-  const [dailyBrief, setDailyBrief]   = useState<string>('');
+  const [githubData, setGithubData] = useState<GithubData | null>(null);
+  const [leetcodeData, setLeetcodeData] = useState<LeetcodeData | null>(null);
+  const [dailyBrief, setDailyBrief] = useState<string>('');
   const [briefLoading, setBriefLoading] = useState<boolean>(true);
 
   const fetchGithubData = async (forceFresh = false): Promise<GithubData | null> => {
@@ -28,11 +27,9 @@ export function useDevData(showToast: ToastFn = () => {}, userCredentials: UserC
     }
 
     try {
-      const url = forceFresh 
-        ? `${API_BASE_URL}/github/${username}/stats?fresh=true` 
-        : `${API_BASE_URL}/github/${username}/stats`;
-      const res = await apiFetch(url, { credentials: 'include' });
-      const data = await res.json();
+      const url = `/github/${username}/stats${forceFresh ? '?fresh=true' : ''}`;
+      const res = await apiFetch(url);
+      const data: GithubData = await res.json();
       setCachedData(cacheKey, data);
       setGithubData(data);
       showToast(forceFresh ? 'GitHub data refreshed ✓' : 'GitHub data loaded !');
@@ -45,7 +42,7 @@ export function useDevData(showToast: ToastFn = () => {}, userCredentials: UserC
     }
   };
 
-  const fetchLeetcodeData = async (forceFresh = false): Promise<any> => {
+  const fetchLeetcodeData = async (forceFresh = false): Promise<LeetcodeData | null> => {
     const username = userCredentials?.leetcode;
     if (!username) return null;
 
@@ -53,7 +50,7 @@ export function useDevData(showToast: ToastFn = () => {}, userCredentials: UserC
     if (forceFresh) {
       try { localStorage.removeItem(cacheKey); } catch {}
     } else {
-      const cached = getCachedData<any>(cacheKey);
+      const cached = getCachedData<LeetcodeData>(cacheKey);
       if (cached) {
         setLeetcodeData(cached);
         showToast('LeetCode data loaded from cache ✓');
@@ -62,31 +59,31 @@ export function useDevData(showToast: ToastFn = () => {}, userCredentials: UserC
     }
 
     try {
-      const url = forceFresh 
-        ? `${API_BASE_URL}/leetcode/${username}?fresh=true` 
-        : `${API_BASE_URL}/leetcode/${username}`;
-      const res = await apiFetch(url, { method: 'POST', credentials: 'include' });
+      const url = `/leetcode/${username}${forceFresh ? '?fresh=true' : ''}`;
+      const res = await apiFetch(url, { method: 'POST' });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      const formatted = { 
-        total: data.total || 0, 
-        easy: data.easy || 0, 
-        medium: data.medium || 0, 
-        hard: data.hard || 0, 
+
+      const formatted: LeetcodeData = {
+        total: data.total || 0,
+        easy: data.easy || 0,
+        medium: data.medium || 0,
+        hard: data.hard || 0,
         rating: data.rating,
         top: data.top,
         globalRank: data.globalRank,
         highestRating: data.highestRating,
         recentSubmissions: data.recentSubmissions || [],
-        streak: 0 
+        streak: 0
       };
+
       setCachedData(cacheKey, formatted);
       setLeetcodeData(formatted);
       showToast(forceFresh ? 'LeetCode data refreshed ✓' : 'LeetCode data loaded ✓');
       return formatted;
     } catch (err: any) {
       showToast(`Could not load LeetCode data: ${err.message}`, 'error');
-      const fallback = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
+      const fallback: LeetcodeData = { error: true, total: '--', easy: '--', medium: '--', hard: '--', rating: '--', top: '--', globalRank: '--', highestRating: '--', streak: 0 };
       setLeetcodeData(fallback);
       return fallback;
     }
@@ -135,4 +132,3 @@ export function useDevData(showToast: ToastFn = () => {}, userCredentials: UserC
 
   return { githubData, leetcodeData, dailyBrief, briefLoading, refetchData };
 }
-
