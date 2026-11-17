@@ -14,13 +14,12 @@ const conversationRoutes = require('./routes/conversations');
 // ─── App Setup ────────────────────────────────────────────────────────────────
 
 const app = express();
-const { redis } = require('./config/redis');
-app.set('redis', redis);
 
 const allowedOrigins = [
   "https://ai-dev-pulse.vercel.app",
-  "http://localhost:5173"
-];
+  "http://localhost:5173",
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 app.use(
   cors({

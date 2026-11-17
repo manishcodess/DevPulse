@@ -7,7 +7,8 @@ const {
   buildSystemPrompt,
   buildDailyBriefPrompt,
   buildResumeJdMatchPrompt,
-  extractMemoryAndTitleFromChat
+  extractMemoryAndTitleFromChat,
+  parseJsonResponse
 } = require('../services/aiPromptService');
 
 const router = express.Router();
@@ -75,13 +76,7 @@ router.post('/resume-match', verifyToken, async (req, res) => {
       }
     });
 
-    let parsedResult;
-    try {
-      parsedResult = JSON.parse(result.text);
-    } catch {
-      const cleaned = result.text.replace(/```json\n?|\n?```/g, '').trim();
-      parsedResult = JSON.parse(cleaned);
-    }
+    const parsedResult = parseJsonResponse(result.text);
 
     // Auto-update user's resumeContext so AI chat mentor retains the target role & gaps
     if (req.userId) {
@@ -104,6 +99,50 @@ router.post('/resume-match', verifyToken, async (req, res) => {
     res.status(500).json({ error: error.message || 'Failed to analyze resume with target job description' });
   }
 });
+
+// ─── Helper: Persists conversation messages & learns user context in background ─
+async function persistChatAndLearn(userId, conversationId, contents, aiResponse) {
+  try {
+    let lastUserText = '';
+    if (Array.isArray(contents) && contents.length > 0) {
+      const lastItem = contents[contents.length - 1];
+      if (lastItem.parts?.[0]?.text) {
+        lastUserText = lastItem.parts[0].text;
+      }
+    }
+
+    if (conversationId) {
+      const conv = await Conversation.findOne({ _id: conversationId, userId });
+      if (conv) {
+        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const hasUserMsg = conv.messages.some(
+          m => m.role === 'user' && m.content === lastUserText
+        );
+
+        const newMessages = [];
+        if (!hasUserMsg && lastUserText) {
+          newMessages.push({ role: 'user', content: lastUserText, timestamp: timeNow });
+        }
+        if (aiResponse) {
+          newMessages.push({ role: 'ai', content: aiResponse, timestamp: timeNow });
+        }
+
+        if (newMessages.length > 0) {
+          await Conversation.findByIdAndUpdate(conversationId, {
+            $push: { messages: { $each: newMessages } },
+            $set: { updatedAt: new Date() }
+          });
+        }
+      }
+    }
+
+    if (lastUserText && aiResponse) {
+      await extractMemoryAndTitleFromChat(userId, conversationId, lastUserText, aiResponse);
+    }
+  } catch (err) {
+    console.warn('Background message save/memory extraction error:', err.message);
+  }
+}
 
 // ─── POST /api/ai/chat (Super Simple Text Streaming with Multi-Thread Persistence) ───
 router.post('/chat', verifyToken, async (req, res) => {
@@ -145,56 +184,8 @@ router.post('/chat', verifyToken, async (req, res) => {
 
     res.end(); // Finish response stream
 
-    // ─── Post-Stream Background Actions (Persistence & Auto Evolution) ────────
-    // Find or locate conversation and persist latest user message + AI response
-    (async () => {
-      try {
-        let convId = conversationId;
-        let lastUserText = '';
-
-        if (Array.isArray(contents) && contents.length > 0) {
-          const lastItem = contents[contents.length - 1];
-          if (lastItem.parts && lastItem.parts[0]?.text) {
-            lastUserText = lastItem.parts[0].text;
-          }
-        }
-
-        if (convId) {
-          const conv = await Conversation.findOne({ _id: convId, userId: req.userId });
-          if (conv) {
-            const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            // Check if last message was already user text
-            const hasUserMsg = conv.messages.some(
-              m => m.role === 'user' && m.content === lastUserText
-            );
-
-            const newMessages = [];
-            if (!hasUserMsg && lastUserText) {
-              newMessages.push({ role: 'user', content: lastUserText, timestamp: timeNow });
-            }
-            if (fullAiResponse) {
-              newMessages.push({ role: 'ai', content: fullAiResponse, timestamp: timeNow });
-            }
-
-            if (newMessages.length > 0) {
-              await Conversation.findByIdAndUpdate(convId, {
-                $push: { messages: { $each: newMessages } },
-                $set: { updatedAt: new Date() }
-              });
-            }
-          }
-        }
-
-        // Trigger memory extraction and automatic title refinement in background
-        if (lastUserText && fullAiResponse) {
-          await extractMemoryAndTitleFromChat(req.userId, convId, lastUserText, fullAiResponse);
-        }
-      } catch (bgErr) {
-        console.warn('Background message save/memory extraction error:', bgErr.message);
-      }
-    })();
-
+    // Run background persistence and memory extraction without blocking the response
+    persistChatAndLearn(req.userId, conversationId, contents, fullAiResponse);
   } catch (error) {
     if (!res.headersSent) {
       res.status(500).json({ error: error.message });

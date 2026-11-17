@@ -45,4 +45,23 @@ async function setCache(key, data, ttlSeconds = 3600) {
   }
 }
 
-module.exports = { redis, getCache, setCache };
+/**
+ * Gets cached data or fetches and caches fresh data
+ * @param {string} key
+ * @param {Function} fetcherFn
+ * @param {number} ttlSeconds
+ * @param {boolean} bypassCache
+ */
+async function fetchWithCache(key, fetcherFn, ttlSeconds = 3600, bypassCache = false) {
+  if (!bypassCache) {
+    const cached = await getCache(key);
+    if (cached) return cached;
+  }
+  const data = await fetcherFn();
+  if (data) {
+    await setCache(key, data, ttlSeconds);
+  }
+  return data;
+}
+
+module.exports = { redis, getCache, setCache, fetchWithCache };

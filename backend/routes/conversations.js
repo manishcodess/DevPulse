@@ -4,6 +4,32 @@ const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+// Helper to format conversation consistently across endpoints
+const formatConversation = (c, includeMessages = false) => {
+  const lastMsg = c.messages?.length ? c.messages[c.messages.length - 1] : null;
+  const base = {
+    id: c._id,
+    _id: c._id,
+    title: c.title || 'New Coaching Session',
+    category: c.category || 'general',
+    pinned: !!c.pinned,
+    tags: c.tags || [],
+    summary: c.summary || '',
+    updatedAt: c.updatedAt,
+    createdAt: c.createdAt,
+  };
+
+  if (includeMessages) {
+    base.messages = c.messages || [];
+  } else {
+    base.messageCount = c.messages ? c.messages.length : 0;
+    base.lastMessageSnippet = lastMsg ? lastMsg.content.slice(0, 80) : '';
+    base.lastMessageRole = lastMsg ? lastMsg.role : null;
+  }
+
+  return base;
+};
+
 // ─── GET /api/conversations ──────────────────────────────────────────────────
 // Returns all chat threads for the logged-in user, sorted by pinned first, then recent
 router.get('/', verifyToken, async (req, res) => {
@@ -13,24 +39,10 @@ router.get('/', verifyToken, async (req, res) => {
       .sort({ pinned: -1, updatedAt: -1 })
       .lean();
 
-    const formatted = conversations.map(c => {
-      const lastMsg = c.messages && c.messages.length > 0 ? c.messages[c.messages.length - 1] : null;
-      return {
-        id: c._id,
-        title: c.title || 'New Coaching Session',
-        category: c.category || 'general',
-        pinned: !!c.pinned,
-        tags: c.tags || [],
-        summary: c.summary || '',
-        messageCount: c.messages ? c.messages.length : 0,
-        lastMessageSnippet: lastMsg ? lastMsg.content.slice(0, 80) : '',
-        lastMessageRole: lastMsg ? lastMsg.role : null,
-        updatedAt: c.updatedAt,
-        createdAt: c.createdAt
-      };
+    res.json({
+      success: true,
+      conversations: conversations.map(c => formatConversation(c, false))
     });
-
-    res.json({ success: true, conversations: formatted });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -62,17 +74,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.status(201).json({
       success: true,
-      conversation: {
-        id: conversation._id,
-        title: conversation.title,
-        category: conversation.category,
-        pinned: conversation.pinned,
-        tags: conversation.tags,
-        summary: conversation.summary,
-        messages: conversation.messages,
-        updatedAt: conversation.updatedAt,
-        createdAt: conversation.createdAt
-      }
+      conversation: formatConversation(conversation, true)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -94,17 +96,7 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     res.json({
       success: true,
-      conversation: {
-        id: conversation._id,
-        title: conversation.title,
-        category: conversation.category,
-        pinned: conversation.pinned,
-        tags: conversation.tags,
-        summary: conversation.summary,
-        messages: conversation.messages,
-        updatedAt: conversation.updatedAt,
-        createdAt: conversation.createdAt
-      }
+      conversation: formatConversation(conversation, true)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -135,15 +127,7 @@ router.patch('/:id', verifyToken, async (req, res) => {
 
     res.json({
       success: true,
-      conversation: {
-        id: conversation._id,
-        title: conversation.title,
-        category: conversation.category,
-        pinned: conversation.pinned,
-        tags: conversation.tags,
-        summary: conversation.summary,
-        updatedAt: conversation.updatedAt
-      }
+      conversation: formatConversation(conversation, false)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -183,7 +167,7 @@ router.post('/:id/clear', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    res.json({ success: true, message: 'Messages cleared', conversation });
+    res.json({ success: true, message: 'Messages cleared', conversation: formatConversation(conversation, true) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

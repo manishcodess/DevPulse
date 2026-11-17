@@ -1,5 +1,5 @@
 const { GoogleGenAI } = require('@google/genai');
-const { getCache, setCache } = require('../config/redis');
+const { fetchWithCache } = require('../config/redis');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const { getGithubStats } = require('./githubService');
@@ -8,34 +8,43 @@ const { getLeetcodeStats } = require('./leetcodeService');
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const AI_MODEL = 'gemini-3.1-flash-lite';
 
+/**
+ * Parses JSON returned by LLM, automatically stripping markdown fences if present
+ */
+const parseJsonResponse = (text) => {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    const cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+    return JSON.parse(cleaned);
+  }
+};
+
 const getOrFetchGithubData = async (username, bypassCache = false) => {
   if (!username) return null;
-  const cacheKey = `cache:github:${username}`;
-  let data = !bypassCache ? await getCache(cacheKey) : null;
-  if (!data) {
-    try {
-      data = await getGithubStats(username);
-      if (data) await setCache(cacheKey, data, 3600);
-    } catch (err) {
-      console.error(`Failed to fetch GitHub stats for ${username}:`, err.message);
-    }
-  }
-  return data;
+  return fetchWithCache(
+    `cache:github:${username}`,
+    () => getGithubStats(username),
+    3600,
+    bypassCache
+  ).catch((err) => {
+    console.error(`Failed to fetch GitHub stats for ${username}:`, err.message);
+    return null;
+  });
 };
 
 const getOrFetchLeetcodeData = async (username, bypassCache = false) => {
   if (!username) return null;
-  const cacheKey = `cache:leetcode:${username}`;
-  let data = !bypassCache ? await getCache(cacheKey) : null;
-  if (!data) {
-    try {
-      data = await getLeetcodeStats(username);
-      if (data) await setCache(cacheKey, data, 3600);
-    } catch (err) {
-      console.error(`Failed to fetch LeetCode stats for ${username}:`, err.message);
-    }
-  }
-  return data;
+  return fetchWithCache(
+    `cache:leetcode:${username}`,
+    () => getLeetcodeStats(username),
+    3600,
+    bypassCache
+  ).catch((err) => {
+    console.error(`Failed to fetch LeetCode stats for ${username}:`, err.message);
+    return null;
+  });
 };
 
 /**
@@ -302,13 +311,7 @@ Return JSON in this exact structure with NO markdown fences:
       }
     });
 
-    let data;
-    try {
-      data = JSON.parse(result.text);
-    } catch {
-      const cleaned = result.text.replace(/```json\n?|\n?```/g, '').trim();
-      data = JSON.parse(cleaned);
-    }
+    const data = parseJsonResponse(result.text);
 
     // 1. Merge new memories if found
     if (data && Array.isArray(data.newMemories) && data.newMemories.length > 0) {
@@ -364,5 +367,6 @@ module.exports = {
   buildSystemPrompt,
   buildDailyBriefPrompt,
   buildResumeJdMatchPrompt,
-  extractMemoryAndTitleFromChat
+  extractMemoryAndTitleFromChat,
+  parseJsonResponse
 };

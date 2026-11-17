@@ -1,5 +1,5 @@
 const express = require('express');
-const { getCache, setCache } = require('../config/redis');
+const { fetchWithCache } = require('../config/redis');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { getLeetcodeStats } = require('../services/leetcodeService');
 const router = express.Router();
@@ -9,25 +9,19 @@ const router = express.Router();
 router.post('/:username', verifyToken, async (req, res) => {
   try {
     const { username } = req.params;
-    const cacheKey = `cache:leetcode:${username}`;
     const bypassCache = req.query.fresh === 'true';
 
-    // 1. Check Redis cache first (if not forcing fresh data)
-    if (!bypassCache) {
-      const cachedData = await getCache(cacheKey);
-      if (cachedData) {
-        return res.json(cachedData);
-      }
-    }
+    const result = await fetchWithCache(
+      `cache:leetcode:${username}`,
+      () => getLeetcodeStats(username),
+      3600,
+      bypassCache
+    );
 
-    // 2. Fetch fresh data from LeetCode Service
-    const result = await getLeetcodeStats(username);
-
-    // 3. Save to Redis cache (1 hour) and send response
-    await setCache(cacheKey, result, 3600);
     res.json(result);
   } catch (error) {
-    res.status(error.message.includes('unavailable') ? 502 : (error.message.includes('not found') ? 404 : 500)).json({ error: error.message });
+    const status = error.message.includes('unavailable') ? 502 : (error.message.includes('not found') ? 404 : 500);
+    res.status(status).json({ error: error.message });
   }
 });
 
